@@ -1,0 +1,92 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+/* Fonts */
+@font-face {
+  font-family: "Amiri-Bold";
+  src: url("/fonts/Amiri-Bold.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "NotoSans-Light";
+  src: url("/fonts/NotoSans-Light.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "Roboto-Bold";
+  src: url("/fonts/Roboto-Bold.ttf") format("truetype");
+}
+
+@font-face {
+  font-family: "ArefRuqaa-Bold";
+  src: url("/fonts/ArefRuqaa-Bold.ttf") format("truetype");
+}
+
+/* Optional utility classes */
+.font-amiri {
+  font-family: "Amiri-Bold";
+}
+.font-notosans-light {
+  font-family: "NotoSans-Light";
+}
+.font-roboto {
+  font-family: "Roboto-Bold";
+}
+.font-arefruqaa {
+  font-family: "ArefRuqaa-Bold";
+}
+
+/* Theme Variables Inline */
+@theme inline {
+  --primary: #00635d;
+  --primary-light: #98d2eb;
+  --dark: #1b1a17;
+  --danger: #ef476f;
+  --secondary: #7e2e84;
+  --secondary-light: #f9b3d1;
+  --secondary-dark: #2f1847;
+  --accent: #dbb68f;
+  --muted: #ebebd3;
+
+  --font-amiri: "Amiri-Bold", sans-serif;
+  --font-notosans-light: "NotoSans-Light", sans-serif;
+  --font-roboto: "Roboto", sans-serif;
+  --font-aref-ruqaa: "ArefRuqaa", serif;
+
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-secondary: var(--secondary);
+  --color-primary: var(--primary);
+}
+
+/* Global Styles */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: white;
+  font-family: var(--font-noto-sans);
+  overflow-x: hidden;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+/* Grid Background */
+.backgroundGrid {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  z-index: -9;
+  background-size: 50px 50px;
+  background-image: linear-gradient(rgba(200, 200, 200, 0.1) 1px, transparent 1px),
+    linear-gradient(to right, rgba(200, 200, 200, 0.1) 1px, transparent 1px);
+}
+
+button {
+  @apply cursor-pointer;
+}
