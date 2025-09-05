@@ -30,7 +30,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const { user } = useAuthStore();
-  console.log(user);
+  // console.log(user);
 
   const menuRefs = useRef({});
 
