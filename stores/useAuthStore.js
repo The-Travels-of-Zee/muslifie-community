@@ -45,7 +45,7 @@ export const useAuthStore = create(
               user: null,
               isAuthenticated: false,
               isLoading: false,
-              error: null, // no error if just unauthenticated
+              error: null,
             });
           }
         } catch (error) {
@@ -85,11 +85,17 @@ export const useAuthStore = create(
         user: state.user,
         isAuthenticated: state.isAuthenticated,
       }),
+      // ✅ Restore user immediately on load
+      onRehydrateStorage: () => (state) => {
+        if (state?.user) {
+          state.isAuthenticated = true;
+        }
+      },
     }
   )
 );
 
-// Hook to initialize auth on app load
+// ✅ Hook to init auth on app load
 export const useInitAuth = () => {
   const checkAuthStatus = useAuthStore((state) => state.checkAuthStatus);
 

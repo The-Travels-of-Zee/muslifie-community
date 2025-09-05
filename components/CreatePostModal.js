@@ -14,8 +14,9 @@ import {
   Users,
   Lock,
   Globe2Icon,
+  User,
 } from "lucide-react";
-import { createPost } from "@/lib/actions/posts";
+import { createPost } from "@/lib/actions/postActions";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
@@ -140,15 +141,9 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
         tags: parsedTags,
         images: newPost.images, // Send File objects
         videos: newPost.videos, // Send File objects
-        userId: user.id,
-        userInfo: {
-          name: user.displayName || user.fullName || user.email?.split("@")[0] || "Anonymous",
-          profileImage: user.photoURL || user.profileImage || "👤",
-          email: user.email,
-        },
       };
 
-      const result = await createPost(postData);
+      const result = await createPost(postData, user);
 
       if (result.success) {
         // Reset form
@@ -243,7 +238,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
                 />
               ) : null}
               <span className="text-xl" style={{ display: user?.photoURL || user?.profileImage ? "none" : "block" }}>
-                {user?.profileImage || "👤"}
+                {user?.profileImage || <User className="w-6 h-6 text-slate-600" />}
               </span>
             </div>
             <div className="flex-1">
@@ -274,7 +269,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
           <div className="mb-4">
             <input
               type="text"
-              placeholder="What's on your mind?"
+              placeholder="Ask a question"
               value={newPost.title}
               onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
               className="w-full text-xl font-medium placeholder-slate-400 border-none outline-none resize-none bg-transparent"
@@ -286,7 +281,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
           {/* Content Textarea */}
           <div className="mb-4">
             <textarea
-              placeholder="Share your thoughts, experiences, or ask a question..."
+              placeholder="Ask questions/queries for your next Halal Trip..."
               rows={4}
               value={newPost.content}
               onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
@@ -295,6 +290,23 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
               maxLength={2000}
             />
             <div className="text-right text-xs text-slate-400 mt-1">{newPost.content.length}/2000 characters</div>
+          </div>
+
+          {/* Additional Options */}
+          <div className="space-y-3">
+            {/* Tags */}
+            <div className="flex items-center space-x-3 p-3 bg-slate-50/50 rounded-lg">
+              <Hash className="w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Add tags (separate with commas: travel, islam, halal)"
+                value={newPost.tags}
+                onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
+                className="flex-1 bg-transparent border-none outline-none text-slate-700 placeholder-slate-400"
+                disabled={isSubmitting}
+                maxLength={200}
+              />
+            </div>
           </div>
 
           {/* File Upload Area */}
@@ -391,23 +403,6 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
               </div>
             </div>
           )}
-
-          {/* Additional Options */}
-          <div className="space-y-3">
-            {/* Tags */}
-            <div className="flex items-center space-x-3 p-3 bg-slate-50/50 rounded-lg">
-              <Hash className="w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Add tags (separate with commas: travel, islam, halal)"
-                value={newPost.tags}
-                onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
-                className="flex-1 bg-transparent border-none outline-none text-slate-700 placeholder-slate-400"
-                disabled={isSubmitting}
-                maxLength={200}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Footer */}

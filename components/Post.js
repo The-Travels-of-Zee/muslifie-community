@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import Comments from "./Comments";
 import {
@@ -15,227 +15,220 @@ import {
   ChevronRight,
   X,
 } from "lucide-react";
-import { togglePostLike, checkUserLike, togglePostVote, checkUserVote } from "@/lib/actions/posts";
+
+import {
+  togglePostLike,
+  checkUserLike,
+  togglePostVote,
+  checkUserVote,
+  togglePostSave,
+  checkUserSave,
+} from "@/lib/actions/postActions";
+import { getCommentsCount } from "@/lib/actions/commentActions";
 import { PostActions } from "./PostActions";
 
 const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpdate, currentUser }) => {
   const router = useRouter();
+  const pathname = usePathname();
 
+  // States
   const [isLiked, setIsLiked] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
-  const [showMoreMenu, setShowMoreMenu] = useState(false);
-  const [showShareMenu, setShowShareMenu] = useState(false);
-  const [imageExpanded, setImageExpanded] = useState(false);
   const [likeCount, setLikeCount] = useState(post.likes || 0);
-  const [likesLoading, setLikesLoading] = useState(true);
+  const [savesCount, setSavesCount] = useState(post.saves || 0);
 
-  const [votesLoading, setVotesLoading] = useState(true);
   const [userVoteStatus, setUserVoteStatus] = useState(null);
   const [upvotesCount, setUpvotesCount] = useState(post.upvotes || 0);
   const [downvotesCount, setDownvotesCount] = useState(post.downvotes || 0);
 
   const [commentsCount, setCommentsCount] = useState(post.comments || 0);
 
-  // Modal states
+  const [showMoreMenu, setShowMoreMenu] = useState(false);
+  const [showShareMenu, setShowShareMenu] = useState(false);
+
   const [showModal, setShowModal] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
 
-  const pathname = usePathname();
+  // Memoized values
+  const mediaItems = useMemo(
+    () => [
+      ...(post.images || []).map((img) => ({ type: "image", src: img })),
+      ...(post.videos || []).map((video) => ({ type: "video", src: video })),
+    ],
+    [post.images, post.videos]
+  );
 
-  // Combine images and videos into a single media array
-  const mediaItems = [
-    ...(post.images || []).map((img) => ({ type: "image", src: img })),
-    ...(post.videos || []).map((video) => ({ type: "video", src: video })),
-  ];
+  const engagementLevel = useMemo(() => {
+    const score = (post.upvotes || 0) + commentsCount;
+    if (score > 50) return "high";
+    if (score > 30) return "medium";
+    return "low";
+  }, [post.upvotes, commentsCount]);
 
-  // Navigate to post detail
-  const handleNavigate = () => {
-    if (pathname === "/") {
-      router.push(`/post/${post.id}`);
-    }
-  };
+  // Handlers
+  const handleNavigate = useCallback(() => {
+    if (pathname === "/") router.push(`/post/${post.id}`);
+  }, [pathname, router, post.id]);
 
-  // Modal functions
-  const openModal = (index) => {
-    setCurrentMediaIndex(index);
-    setShowModal(true);
-    // Prevent body scroll
-    document.body.style.overflow = "hidden";
-  };
+  const handleLike = useCallback(async () => {
+    if (!currentUser) return;
 
-  const closeModal = () => {
-    setShowModal(false);
-    document.body.style.overflow = "unset";
-  };
-
-  const nextMedia = () => {
-    setCurrentMediaIndex((prev) => (prev === mediaItems.length - 1 ? 0 : prev + 1));
-  };
-
-  const prevMedia = () => {
-    setCurrentMediaIndex((prev) => (prev === 0 ? mediaItems.length - 1 : prev - 1));
-  };
-
-  // Close modal on escape key
-  useEffect(() => {
-    const handleEscape = (e) => {
-      if (e.key === "Escape") {
-        closeModal();
-      }
-    };
-
-    if (showModal) {
-      document.addEventListener("keydown", handleEscape);
-      return () => document.removeEventListener("keydown", handleEscape);
-    }
-  }, [showModal]);
-
-  // Check if current user has liked this post
-  useEffect(() => {
-    const checkLikeStatus = async () => {
-      if (currentUser && post.id) {
-        try {
-          setLikesLoading(true);
-          const userHasLiked = await checkUserLike(post.id, currentUser.id);
-          setIsLiked(userHasLiked);
-        } catch (error) {
-          console.error("Error checking like status:", error);
-        } finally {
-          setLikesLoading(false);
-        }
-      } else {
-        setLikesLoading(false);
-      }
-    };
-
-    checkLikeStatus();
-  }, [post.id, currentUser]);
-
-  // Check if current user has voted this post
-  useEffect(() => {
-    const checkVoteStatus = async () => {
-      if (currentUser && post.id) {
-        try {
-          setVotesLoading(true);
-          const userVote = await checkUserVote(post.id, currentUser.id);
-          setUserVoteStatus(userVote);
-        } catch (error) {
-          console.error("Error checking vote status:", error);
-        } finally {
-          setVotesLoading(false);
-        }
-      } else {
-        setVotesLoading(false);
-      }
-    };
-
-    checkVoteStatus();
-  }, [post.id, currentUser]);
-
-  // Sync updates from post prop
-  useEffect(() => {
-    setCommentsCount(post.comments || 0);
-  }, [post.comments]);
-
-  useEffect(() => {
-    setLikeCount(post.likes || 0);
-  }, [post.likes]);
-
-  useEffect(() => {
-    setUpvotesCount(post.upvotes || 0);
-    setDownvotesCount(post.downvotes || 0);
-  }, [post.upvotes, post.downvotes]);
-
-  const handleLike = async () => {
-    if (!currentUser || likesLoading) return;
+    const optimisticLiked = !isLiked;
+    setIsLiked(optimisticLiked);
+    setLikeCount((prev) => prev + (optimisticLiked ? 1 : -1));
 
     try {
-      const newIsLiked = !isLiked;
-      const newLikeCount = newIsLiked ? likeCount + 1 : likeCount - 1;
-
-      setIsLiked(newIsLiked);
-      setLikeCount(newLikeCount);
-
       const result = await togglePostLike(post.id, currentUser, isLiked);
-
       if (result.success) {
         setIsLiked(result.isLiked);
         setLikeCount(result.likesCount);
-      } else {
-        setIsLiked(isLiked);
-        setLikeCount(likeCount);
       }
     } catch {
       setIsLiked(isLiked);
       setLikeCount(likeCount);
     }
-  };
+  }, [isLiked, currentUser, post.id, likeCount]);
 
-  const handleVote = async (voteType) => {
-    if (!currentUser) return;
+  const handleVote = useCallback(
+    async (voteType) => {
+      if (!currentUser) return;
 
-    try {
-      setVotesLoading(true);
+      let optimisticStatus = userVoteStatus;
+      let optimisticUp = upvotesCount;
+      let optimisticDown = downvotesCount;
 
       if (voteType === "up") {
         if (userVoteStatus === "up") {
-          setUserVoteStatus(null);
-          setUpvotesCount(upvotesCount - 1);
+          optimisticStatus = null;
+          optimisticUp -= 1;
         } else if (userVoteStatus === "down") {
-          setUserVoteStatus("up");
-          setUpvotesCount(upvotesCount + 1);
-          setDownvotesCount(downvotesCount - 1);
+          optimisticStatus = "up";
+          optimisticUp += 1;
+          optimisticDown -= 1;
         } else {
-          setUserVoteStatus("up");
-          setUpvotesCount(upvotesCount + 1);
+          optimisticStatus = "up";
+          optimisticUp += 1;
         }
-      } else if (voteType === "down") {
+      } else {
         if (userVoteStatus === "down") {
-          setUserVoteStatus(null);
-          setDownvotesCount(downvotesCount - 1);
+          optimisticStatus = null;
+          optimisticDown -= 1;
         } else if (userVoteStatus === "up") {
-          setUserVoteStatus("down");
-          setUpvotesCount(upvotesCount - 1);
-          setDownvotesCount(downvotesCount + 1);
+          optimisticStatus = "down";
+          optimisticDown += 1;
+          optimisticUp -= 1;
         } else {
-          setUserVoteStatus("down");
-          setDownvotesCount(downvotesCount + 1);
+          optimisticStatus = "down";
+          optimisticDown += 1;
         }
       }
 
-      const result = await togglePostVote(post.id, currentUser, voteType);
+      setUserVoteStatus(optimisticStatus);
+      setUpvotesCount(optimisticUp);
+      setDownvotesCount(optimisticDown);
 
+      try {
+        const result = await togglePostVote(post.id, currentUser, voteType);
+        if (result.success) {
+          setUserVoteStatus(result.userVoteStatus);
+          setUpvotesCount(result.upvotesCount);
+          setDownvotesCount(result.downvotesCount);
+        }
+      } catch {
+        setUserVoteStatus(userVoteStatus);
+        setUpvotesCount(upvotesCount);
+        setDownvotesCount(downvotesCount);
+      }
+    },
+    [currentUser, post.id, userVoteStatus, upvotesCount, downvotesCount]
+  );
+
+  const handleSave = useCallback(async () => {
+    if (!currentUser) return;
+
+    const optimisticSaved = !isBookmarked;
+    setIsBookmarked(optimisticSaved);
+    setSavesCount((prev) => prev + (optimisticSaved ? 1 : -1));
+
+    try {
+      const result = await togglePostSave(post.id, currentUser, isBookmarked);
       if (result.success) {
-        setUserVoteStatus(result.userVoteStatus);
-        setUpvotesCount(result.upvotesCount);
-        setDownvotesCount(result.downvotesCount);
+        setIsBookmarked(result.isSaved);
+        setSavesCount(result.savesCount);
       }
     } catch {
-      setUserVoteStatus(userVoteStatus);
-      setUpvotesCount(upvotesCount);
-      setDownvotesCount(downvotesCount);
-    } finally {
-      setVotesLoading(false);
+      setIsBookmarked(isBookmarked);
+      setSavesCount(savesCount);
     }
-  };
+  }, [isBookmarked, currentUser, post.id, savesCount]);
 
-  const engagementLevel =
-    (post.upvotes || 0) + commentsCount > 50 ? "high" : (post.upvotes || 0) + commentsCount > 30 ? "medium" : "low";
+  // Modal controls
+  const openModal = useCallback((index) => {
+    setCurrentMediaIndex(index);
+    setShowModal(true);
+    document.body.style.overflow = "hidden";
+  }, []);
 
-  const user = post.userInfo || {};
+  const closeModal = useCallback(() => {
+    setShowModal(false);
+    document.body.style.overflow = "unset";
+  }, []);
+
+  const nextMedia = useCallback(() => {
+    setCurrentMediaIndex((prev) => (prev === mediaItems.length - 1 ? 0 : prev + 1));
+  }, [mediaItems.length]);
+
+  const prevMedia = useCallback(() => {
+    setCurrentMediaIndex((prev) => (prev === 0 ? mediaItems.length - 1 : prev - 1));
+  }, [mediaItems.length]);
+
+  // Escape key for modal
+  useEffect(() => {
+    if (!showModal) return;
+    const handleEscape = (e) => e.key === "Escape" && closeModal();
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [showModal, closeModal]);
+
+  // Fetch statuses once
+  useEffect(() => {
+    if (!currentUser || !post.id) return;
+
+    const init = async () => {
+      try {
+        const [userHasLiked, userVote, userHasSaved, count] = await Promise.all([
+          checkUserLike(post.id, currentUser.id),
+          checkUserVote(post.id, currentUser.id),
+          checkUserSave(post.id, currentUser.id),
+          getCommentsCount(post.id),
+        ]);
+
+        setIsLiked(userHasLiked);
+        setUserVoteStatus(userVote);
+        setIsBookmarked(userHasSaved);
+        setCommentsCount(count);
+      } catch (err) {
+        console.error("Init error:", err);
+      }
+    };
+
+    init();
+  }, [post.id, currentUser]);
+
+  const user = post.user || {};
 
   return (
     <>
       <article
-        className={`${
-          pathname === "/" ? "cursor-pointer" : ""
-        } bg-white rounded-2xl border shadow-sm hover:shadow-xl transition-all duration-500 group relative ${
-          engagementLevel === "high"
-            ? "border-yellow-200 shadow-yellow-50"
-            : engagementLevel === "medium"
-            ? "border-blue-200 shadow-blue-50"
-            : "border-slate-200"
-        }`}
+        className={`bg-white rounded-2xl border shadow-sm hover:shadow-xl transition-all duration-500 relative 
+          ${pathname === "/" ? "cursor-pointer" : ""} 
+          ${
+            engagementLevel === "high"
+              ? "border-yellow-200 shadow-yellow-50"
+              : engagementLevel === "medium"
+              ? "border-blue-200 shadow-blue-50"
+              : "border-slate-200"
+          }`}
       >
         {/* Trending Badge */}
         {engagementLevel === "high" && (
@@ -260,7 +253,7 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
                         : "bg-gradient-to-br from-slate-100 to-slate-200"
                     }`}
                   >
-                    {user?.profileImage === "" ? (
+                    {user?.profileImage !== "" ? (
                       <img src={user?.profileImage} alt="User Avatar" className="w-12 h-12 rounded-full object-cover" />
                     ) : (
                       <User className="w-6 h-6 text-slate-600" />
@@ -286,8 +279,8 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
                 <div className="relative">
                   <button
                     onClick={(e) => {
-                      e.stopPropagation(); // prevent navigation
-                      setShowMoreMenu(!showMoreMenu);
+                      e.stopPropagation();
+                      setShowMoreMenu((prev) => !prev);
                     }}
                     className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
                   >
@@ -299,7 +292,7 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
-                          setIsBookmarked(!isBookmarked);
+                          handleSave();
                           setShowMoreMenu(false);
                         }}
                         className="w-full flex items-center space-x-3 px-4 py-2 text-left text-slate-700 hover:bg-slate-50 transition-colors"
@@ -352,46 +345,49 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
                 </div>
               )}
 
-              {/* Images */}
-              {post.images && post.images.length > 0 && (
-                <div className="mt-4 relative group">
-                  <img
-                    src={post.images[0]}
-                    alt="Post content"
-                    className="w-full max-w-2xl h-80 object-cover rounded-xl shadow-md cursor-pointer transition-all duration-500 hover:scale-[1.02] group-hover:shadow-lg"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      openModal(0);
-                    }}
-                  />
-                  {post.images.length > 1 && (
-                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
-                      1 of {post.images.length}
-                    </div>
-                  )}
-                </div>
-              )}
+              {/* Media */}
+              <div className="flex flex-col lg:flex-row mt-4 relative group items-center justify-center gap-2">
+                {/* Images */}
+                {post.images && post.images.length > 0 && (
+                  <div className="flex-1 relative group">
+                    <img
+                      src={post.images[0]}
+                      alt="Post content"
+                      className="w-full max-w-2xl h-80 object-cover rounded-xl shadow-md cursor-pointer transition-shadow group-hover:shadow-lg"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openModal(0);
+                      }}
+                    />
+                    {post.images.length > 1 && (
+                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
+                        1 of {post.images.length}
+                      </div>
+                    )}
+                  </div>
+                )}
 
-              {/* Videos */}
-              {post.videos && post.videos.length > 0 && (
-                <div className="mt-4 relative group">
-                  <video
-                    src={post.videos[0]}
-                    className="w-full max-w-2xl h-80 object-cover rounded-xl shadow-md hover:shadow-lg transition-shadow cursor-pointer"
-                    controls={false}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      const videoIndex = (post.images || []).length; // Start from after images
-                      openModal(videoIndex);
-                    }}
-                  />
-                  {post.videos.length > 1 && (
-                    <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
-                      1 of {post.videos.length}
-                    </div>
-                  )}
-                </div>
-              )}
+                {/* Videos */}
+                {post.videos && post.videos.length > 0 && post.videos[0]?.trim() && (
+                  <div className="flex-1 relative group">
+                    <video
+                      src={post.videos[0]}
+                      className="w-full max-w-2xl h-80 object-cover rounded-xl shadow-md group-hover:shadow-lg transition-shadow cursor-pointer"
+                      controls={false}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const videoIndex = (post.images || []).length;
+                        openModal(videoIndex);
+                      }}
+                    />
+                    {post.videos.length > 1 && (
+                      <div className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-medium">
+                        1 of {post.videos.length}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -412,8 +408,6 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
           isBookmarked={isBookmarked}
           engagementLevel={engagementLevel}
           commentsCount={commentsCount}
-          likesLoading={likesLoading}
-          votesLoading={votesLoading}
         />
 
         {/* Comments */}
@@ -430,8 +424,8 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
 
       {/* Fullscreen Modal */}
       {showModal && mediaItems.length > 0 && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90">
-          {/* Close Button */}
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 bg-opacity-90">
+          {/* Close */}
           <button
             onClick={closeModal}
             className="absolute top-4 right-4 z-60 p-2 text-white hover:bg-white/20 rounded-full transition-colors"
@@ -439,12 +433,12 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
             <X className="w-6 h-6" />
           </button>
 
-          {/* Media Counter */}
+          {/* Counter */}
           <div className="absolute top-4 left-4 z-60 bg-black/60 backdrop-blur-sm text-white px-3 py-1 rounded-full text-sm font-medium">
             {currentMediaIndex + 1} of {mediaItems.length}
           </div>
 
-          {/* Previous Button */}
+          {/* Prev */}
           {mediaItems.length > 1 && (
             <button
               onClick={prevMedia}
@@ -454,7 +448,7 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
             </button>
           )}
 
-          {/* Next Button */}
+          {/* Next */}
           {mediaItems.length > 1 && (
             <button
               onClick={nextMedia}
@@ -464,7 +458,7 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
             </button>
           )}
 
-          {/* Media Content */}
+          {/* Content */}
           <div className="max-w-4xl max-h-full w-full h-full flex items-center justify-center p-4">
             {mediaItems[currentMediaIndex]?.type === "image" ? (
               <img
@@ -481,9 +475,6 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
               />
             )}
           </div>
-
-          {/* Click outside to close */}
-          <div className="absolute inset-0 -z-10" onClick={closeModal} />
         </div>
       )}
     </>

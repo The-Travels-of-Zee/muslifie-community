@@ -10,7 +10,7 @@ import {
   deleteComment,
   updateReply,
   deleteReply,
-} from "@/lib/actions/posts";
+} from "@/lib/actions/commentActions";
 import { User, Reply, Send, MoreHorizontal, Edit3, Trash2 } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
 
@@ -31,6 +31,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
 
   // Get auth state from Zustand store
   const { user } = useAuthStore();
+  console.log(user);
 
   // Refs for click outside detection
   const menuRefs = useRef({});
@@ -65,7 +66,6 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
     try {
       const fetchedComments = await getComments(post.id);
       setComments(fetchedComments);
-      // Update parent with comments count
       if (onCommentsUpdate) {
         onCommentsUpdate(fetchedComments.length);
       }
@@ -78,27 +78,13 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
 
   const handleAddComment = async (e) => {
     e.preventDefault();
-    if (!newComment.trim() || submitting) return;
+    if (!newComment.trim() || submitting || !user) return;
 
     setSubmitting(true);
     try {
-      const currentUser = {
-        name: user.fullName,
-        email: user.email,
-        profileImage: user?.profileImage,
-        userId: user.id,
-      };
-
       if (editingComment) {
         // Update existing comment
-        const result = await updateComment(
-          post.id,
-          editingComment,
-          {
-            content: newComment.trim(),
-          },
-          user.id
-        );
+        const result = await updateComment(post.id, editingComment, { content: newComment.trim() }, user.id);
 
         if (result.success) {
           setComments((prev) =>
@@ -110,16 +96,26 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
           setEditingComment(null);
         }
       } else {
-        // Add new comment
+        // Add new comment - pass userId directly, not user object
         const result = await addComment(post.id, {
           content: newComment.trim(),
-          user: currentUser,
+          userId: user.id, // ✅ pass only ID, let server build userRef
         });
 
         if (result.success) {
-          setComments((prev) => [result.comment, ...prev]);
+          // Add user info to the new comment for immediate display
+          const newCommentWithUser = {
+            ...result.comment,
+            user: {
+              id: user.id,
+              fullName: user.fullName,
+              profileImage: user.profileImage,
+            },
+            repliesCount: 0,
+          };
+
+          setComments((prev) => [newCommentWithUser, ...prev]);
           setNewComment("");
-          // Update parent with new count
           if (onCommentsUpdate) {
             onCommentsUpdate(comments.length + 1);
           }
@@ -136,15 +132,13 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
     setDeleteLoading(true);
     try {
       const result = await deleteComment(post.id, commentId, user.id);
-
       if (result.success) {
-        setComments((prev) => prev.filter((comment) => comment.id !== commentId));
+        setComments((prev) => prev.filter((c) => c.id !== commentId));
         setExpandedReplies((prev) => {
           const updated = { ...prev };
           delete updated[commentId];
           return updated;
         });
-        // Update parent with new count
         if (onCommentsUpdate) {
           onCommentsUpdate(comments.length - 1);
         }
@@ -184,38 +178,27 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
 
   const toggleReplies = (commentId) => {
     if (expandedReplies[commentId]) {
-      // Hide replies
       setExpandedReplies((prev) => ({
         ...prev,
         [commentId]: null,
       }));
     } else {
-      // Load and show replies
       loadReplies(commentId);
     }
   };
 
   const handleAddReply = async (commentId) => {
     const replyContent = replyInputs[commentId];
-    if (!replyContent?.trim()) return;
+    if (!replyContent?.trim() || !user) return;
 
     try {
-      const currentUser = {
-        name: user.fullName,
-        email: user.email,
-        profileImage: user?.profileImage,
-        userId: user.id,
-      };
-
       if (editingReply?.commentId === commentId) {
         // Update existing reply
         const result = await updateReply(
           post.id,
           commentId,
           editingReply.replyId,
-          {
-            content: replyContent.trim(),
-          },
+          { content: replyContent.trim() },
           user.id
         );
 
@@ -226,30 +209,39 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
               reply.id === editingReply.replyId ? { ...reply, content: replyContent.trim(), isEdited: true } : reply
             ),
           }));
-          setReplyInputs((prev) => ({
-            ...prev,
-            [commentId]: "",
-          }));
+          setReplyInputs((prev) => ({ ...prev, [commentId]: "" }));
           setEditingReply(null);
         }
       } else {
-        // Add new reply
+        // Add new reply - fix: pass userId directly
         const result = await addReply(post.id, commentId, {
           content: replyContent.trim(),
-          user: currentUser,
+          userId: user.id, // ✅ Fixed: pass userId instead of user object
         });
 
         if (result.success) {
-          // Add reply to expanded replies
+          // Add user info to the new reply for immediate display
+          const newReplyWithUser = {
+            ...result.reply,
+            user: {
+              id: user.id,
+              fullName: user.fullName,
+              profileImage: user.profileImage,
+            },
+          };
+
           setExpandedReplies((prev) => ({
             ...prev,
-            [commentId]: [...(prev[commentId] || []), result.reply],
+            [commentId]: [...(prev[commentId] || []), newReplyWithUser],
           }));
-          // Clear input
-          setReplyInputs((prev) => ({
-            ...prev,
-            [commentId]: "",
-          }));
+          setReplyInputs((prev) => ({ ...prev, [commentId]: "" }));
+
+          // Update the comment's reply count
+          setComments((prev) =>
+            prev.map((comment) =>
+              comment.id === commentId ? { ...comment, repliesCount: (comment.repliesCount || 0) + 1 } : comment
+            )
+          );
         }
       }
     } catch (error) {
@@ -261,12 +253,20 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
     setDeleteLoading(true);
     try {
       const result = await deleteReply(post.id, commentId, replyId, user.id);
-
       if (result.success) {
         setExpandedReplies((prev) => ({
           ...prev,
-          [commentId]: prev[commentId].filter((reply) => reply.id !== replyId),
+          [commentId]: prev[commentId].filter((r) => r.id !== replyId),
         }));
+
+        // Update the comment's reply count
+        setComments((prev) =>
+          prev.map((comment) =>
+            comment.id === commentId
+              ? { ...comment, repliesCount: Math.max((comment.repliesCount || 0) - 1, 0) }
+              : comment
+          )
+        );
       }
     } catch (error) {
       console.error("Error deleting reply:", error);
@@ -278,10 +278,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
 
   const handleEditReply = (commentId, replyId, content) => {
     setEditingReply({ commentId, replyId });
-    setReplyInputs((prev) => ({
-      ...prev,
-      [commentId]: content,
-    }));
+    setReplyInputs((prev) => ({ ...prev, [commentId]: content }));
     setShowMenus({});
   };
 
@@ -293,9 +290,18 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
     }));
   };
 
+  // Don't render anything if user is not authenticated
+  if (!user) {
+    return (
+      <div className="p-4 text-center">
+        <p className="text-gray-500">Please log in to view and post comments.</p>
+      </div>
+    );
+  }
+
   if (loading) {
     return (
-      <div className="p-6">
+      <div className="p-4">
         <div className="flex justify-center items-center py-8">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
           <span className="ml-3 text-gray-600">Loading comments...</span>
@@ -306,12 +312,16 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
 
   return (
     <>
-      <div className="p-6">
+      <div className="p-4">
         {/* Add Comment Form */}
         <form onSubmit={handleAddComment} className="mb-6">
           <div className="flex space-x-3">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-              <User className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+              {user?.profileImage ? (
+                <img src={user.profileImage} alt={user.fullName} className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-4 h-4 text-white" />
+              )}
             </div>
             <div className="flex-1">
               <textarea
@@ -360,56 +370,58 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
             <p className="text-gray-500">No comments yet. Be the first to comment!</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-6">
             {comments.map((comment) => (
-              <div key={comment.id} className="bg-white rounded-lg p-4 border border-gray-100">
+              <div key={comment.id} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
                 {/* Comment Header */}
-                <div className="flex items-center justify-between mb-3">
+                <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0">
+                    <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
                       {comment.user?.profileImage ? (
                         <img
                           src={comment.user.profileImage}
-                          alt={comment.user.name}
-                          className="w-8 h-8 rounded-full object-cover"
+                          alt={comment.user.fullName}
+                          className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User className="w-4 h-4 text-white" />
+                        <User className="w-5 h-5 text-white" />
                       )}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="font-semibold text-gray-900">{comment.user?.name || "Anonymous"}</span>
-                        <span className="text-sm text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
+                    <div>
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-semibold text-gray-900 text-sm sm:text-base">
+                          {comment.user?.fullName || "Anonymous"}
+                        </span>
+                        <span className="text-xs text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
                         {comment.isEdited && <span className="text-xs text-gray-400">(edited)</span>}
                       </div>
                     </div>
                   </div>
 
                   {/* Three dots menu for comment owner */}
-                  {user && comment.user?.userId === user.id && (
+                  {user && comment.user?.id === user.id && (
                     <div className="relative" ref={(el) => (menuRefs.current[`comment-${comment.id}`] = el)}>
                       <button
                         onClick={() => toggleMenu("comment", comment.id)}
-                        className="p-1 text-gray-400 hover:text-gray-600 rounded-full transition-colors"
+                        className="p-2 text-gray-400 hover:text-gray-600 rounded-full transition-colors"
                       >
-                        <MoreHorizontal className="w-4 h-4" />
+                        <MoreHorizontal className="w-5 h-5" />
                       </button>
 
                       {showMenus[`comment-${comment.id}`] && (
-                        <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                        <div className="absolute right-0 top-full mt-2 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                           <button
                             onClick={() => handleEditComment(comment.id, comment.content)}
-                            className="w-full flex items-center space-x-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-50"
                           >
-                            <Edit3 className="w-3 h-3" />
+                            <Edit3 className="w-4 h-4" />
                             <span className="text-sm">Edit</span>
                           </button>
                           <button
                             onClick={() => setShowDeleteModal({ type: "comment", id: comment.id })}
-                            className="w-full flex items-center space-x-2 px-3 py-2 text-left text-red-600 hover:bg-red-50 transition-colors"
+                            className="w-full flex items-center space-x-2 px-3 py-2 text-left text-red-600 hover:bg-red-50"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-4 h-4" />
                             <span className="text-sm">Delete</span>
                           </button>
                         </div>
@@ -419,10 +431,10 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                 </div>
 
                 {/* Comment Content */}
-                <p className="text-gray-800 mb-3 ml-11">{comment.content}</p>
+                <p className="text-gray-800 text-sm sm:text-base mt-3 ml-12">{comment.content}</p>
 
                 {/* Comment Actions */}
-                <div className="flex items-center space-x-4 ml-11">
+                <div className="flex items-center space-x-4 ml-12 mt-2">
                   <button
                     onClick={() => toggleReplies(comment.id)}
                     className="flex items-center space-x-1 text-gray-500 hover:text-blue-600 text-sm transition-colors"
@@ -438,10 +450,14 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
 
                 {/* Reply Input */}
                 {expandedReplies[comment.id] !== null && (
-                  <div className="mt-4 ml-11">
+                  <div className="mt-4 ml-12">
                     <div className="flex space-x-3 mb-4">
-                      <div className="w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
-                        <User className="w-3 h-3 text-white" />
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        {user?.profileImage ? (
+                          <img src={user.profileImage} alt={user.fullName} className="w-full h-full object-cover" />
+                        ) : (
+                          <User className="w-4 h-4 text-white" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <div className="flex flex-col space-y-2">
@@ -458,7 +474,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                               placeholder={
                                 editingReply?.commentId === comment.id ? "Update your reply..." : "Write a reply..."
                               }
-                              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
                               onKeyPress={(e) => {
                                 if (e.key === "Enter") {
                                   handleAddReply(comment.id);
@@ -468,7 +484,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                             <button
                               onClick={() => handleAddReply(comment.id)}
                               disabled={!replyInputs[comment.id]?.trim()}
-                              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Send className="w-4 h-4" />
                             </button>
@@ -476,7 +492,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                           {editingReply?.commentId === comment.id && (
                             <button
                               onClick={cancelEdit}
-                              className="self-start text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                              className="self-start text-xs text-gray-600 hover:text-gray-800"
                             >
                               Cancel
                             </button>
@@ -491,21 +507,21 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                         {expandedReplies[comment.id].map((reply) => (
                           <div key={reply.id} className="flex justify-between items-start bg-gray-50 rounded-lg p-3">
                             <div className="flex space-x-3 flex-1">
-                              <div className="w-6 h-6 bg-gray-400 rounded-full flex items-center justify-center flex-shrink-0">
+                              <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
                                 {reply.user?.profileImage ? (
                                   <img
                                     src={reply.user.profileImage}
-                                    alt={reply.user.name}
-                                    className="w-6 h-6 rounded-full object-cover"
+                                    alt={reply.user.fullName}
+                                    className="w-full h-full object-cover"
                                   />
                                 ) : (
-                                  <User className="w-3 h-3 text-white" />
+                                  <User className="w-4 h-4 text-white" />
                                 )}
                               </div>
                               <div className="flex-1">
-                                <div className="flex items-center space-x-2 mb-1">
+                                <div className="flex flex-wrap items-center gap-2 mb-1">
                                   <span className="font-medium text-gray-900 text-sm">
-                                    {reply.user?.name || "Anonymous"}
+                                    {reply.user?.fullName || "Anonymous"}
                                   </span>
                                   <span className="text-xs text-gray-500">{formatTimeAgo(reply.createdAt)}</span>
                                   {reply.isEdited && <span className="text-xs text-gray-400">(edited)</span>}
@@ -515,31 +531,35 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                             </div>
 
                             {/* Three dots menu for reply owner */}
-                            {user && reply.user?.userId === user.id && (
+                            {user && reply.user?.id === user.id && (
                               <div className="relative ml-2" ref={(el) => (menuRefs.current[`reply-${reply.id}`] = el)}>
                                 <button
                                   onClick={() => toggleMenu("reply", reply.id)}
-                                  className="p-1 text-gray-400 hover:text-gray-600 rounded-full transition-colors"
+                                  className="p-2 text-gray-400 hover:text-gray-600 rounded-full transition-colors"
                                 >
-                                  <MoreHorizontal className="w-3 h-3" />
+                                  <MoreHorizontal className="w-4 h-4" />
                                 </button>
 
                                 {showMenus[`reply-${reply.id}`] && (
-                                  <div className="absolute right-0 top-full mt-1 w-32 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
+                                  <div className="absolute right-0 top-full mt-2 w-36 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-20">
                                     <button
                                       onClick={() => handleEditReply(comment.id, reply.id, reply.content)}
-                                      className="w-full flex items-center space-x-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-50 transition-colors"
+                                      className="w-full flex items-center space-x-2 px-3 py-2 text-left text-gray-700 hover:bg-gray-50"
                                     >
-                                      <Edit3 className="w-3 h-3" />
+                                      <Edit3 className="w-4 h-4" />
                                       <span className="text-sm">Edit</span>
                                     </button>
                                     <button
                                       onClick={() =>
-                                        setShowDeleteModal({ type: "reply", id: reply.id, commentId: comment.id })
+                                        setShowDeleteModal({
+                                          type: "reply",
+                                          id: reply.id,
+                                          commentId: comment.id,
+                                        })
                                       }
-                                      className="w-full flex items-center space-x-2 px-3 py-2 text-left text-red-600 hover:bg-red-50 transition-colors"
+                                      className="w-full flex items-center space-x-2 px-3 py-2 text-left text-red-600 hover:bg-red-50"
                                     >
-                                      <Trash2 className="w-3 h-3" />
+                                      <Trash2 className="w-4 h-4" />
                                       <span className="text-sm">Delete</span>
                                     </button>
                                   </div>
@@ -560,7 +580,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
 
       {/* Delete Confirmation Modal */}
       {showDeleteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 bg-opacity-50">
           <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Delete {showDeleteModal.type === "comment" ? "Comment" : "Reply"}?

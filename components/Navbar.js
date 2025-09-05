@@ -1,28 +1,14 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import {
-  Search,
-  Bell,
-  Plus,
-  Menu,
-  ChevronDown,
-  User,
-  Settings,
-  LogOut,
-  X,
-  Bookmark,
-  FileText,
-  LogIn,
-  UserPlus,
-} from "lucide-react";
+import { Bell, Plus, Menu, X, Bookmark, FileText, LogIn, UserPlus, Settings, LogOut } from "lucide-react";
 import CreatePost from "./CreatePostModal";
 import Notifications from "./Notifications";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore"; // Adjust path as needed
+import SearchBar from "./SearchBar"; // ✅ import SearchBar
 
 const Navbar = () => {
-  const [searchQuery, setSearchQuery] = useState("");
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
@@ -47,12 +33,10 @@ const Navbar = () => {
         setIsUserDropdownOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Handle create post click
   const handleCreatePostClick = () => {
     if (isAuthenticated) {
       setShowCreatePost(true);
@@ -61,7 +45,6 @@ const Navbar = () => {
     }
   };
 
-  // Handle logout
   const handleLogout = async () => {
     try {
       await logout();
@@ -72,7 +55,6 @@ const Navbar = () => {
     }
   };
 
-  // Render auth buttons for unauthenticated users
   const renderAuthButtons = () => (
     <div className="flex items-center space-x-2">
       <Link href="/login">
@@ -90,7 +72,6 @@ const Navbar = () => {
     </div>
   );
 
-  // Render user profile section for authenticated users
   const renderUserProfile = () => (
     <div className="relative hidden sm:block" ref={dropdownRef}>
       <Link href="/my-posts">
@@ -132,19 +113,8 @@ const Navbar = () => {
               </Link>
             </div>
 
-            {/* Search */}
-            <div className="flex-1 max-w-lg mx-4">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5" />
-                <input
-                  type="text"
-                  placeholder="Search tours, places, questions..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-lg bg-slate-50 focus:bg-white focus:border-primary focus:outline-none transition-colors"
-                />
-              </div>
-            </div>
+            {/* ✅ Replace dummy search with SearchBar */}
+            <SearchBar />
 
             {/* Right side */}
             <div className="flex items-center space-x-4">
@@ -157,12 +127,11 @@ const Navbar = () => {
                 <span className="font-medium">Create Post</span>
               </button>
 
-              {/* Conditional rendering based on auth state */}
               {isLoading ? (
                 <div className="hidden sm:block w-8 h-8 rounded-full bg-slate-200 animate-pulse"></div>
               ) : isAuthenticated ? (
                 <>
-                  {/* Notifications - only for authenticated users */}
+                  {/* Notifications */}
                   <button
                     onClick={() => setShowNotifications(true)}
                     className="relative p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
@@ -170,16 +139,13 @@ const Navbar = () => {
                     <Bell className="w-5 h-5" />
                     <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
                   </button>
-
-                  {/* User Profile */}
                   {renderUserProfile()}
                 </>
               ) : (
-                /* Auth buttons for unauthenticated users - Desktop */
                 <div className="hidden sm:block">{renderAuthButtons()}</div>
               )}
 
-              {/* Mobile Menu Button */}
+              {/* Mobile Menu */}
               <button
                 onClick={() => setShowSidebar(!showSidebar)}
                 className="sm:hidden p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
@@ -197,15 +163,15 @@ const Navbar = () => {
           handleCloseCreatePost={() => setShowCreatePost(false)}
           handleCreatePost={(post) => {
             console.log("New post from navbar:", post);
-            setShowCreatePost(false); // close modal after creating
+            setShowCreatePost(false);
           }}
         />
       )}
 
-      {/* Notification Modal - only show if authenticated */}
+      {/* Notifications */}
       {isAuthenticated && <Notifications isOpen={showNotifications} onClose={() => setShowNotifications(false)} />}
 
-      {/* Mobile Sidebar with Blurred Background */}
+      {/* Mobile Sidebar (unchanged) */}
       {showSidebar && (
         <div className="fixed inset-0 z-50 sm:hidden">
           {/* Blurred backdrop */}
