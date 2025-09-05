@@ -7,8 +7,7 @@ import { z } from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { signInWithEmail } from "@/lib/actions/authActions";
-// import { loginWithEmail, signInWithGoogle } from "@/lib/actions/authActions";
+import { signInWithEmail, signInWithGoogle } from "@/lib/actions/authActions";
 
 // Zod validation schema
 const logInSchema = z.object({
@@ -391,7 +390,7 @@ export default function LogInPage() {
                 disabled={isLoading || isGoogleLoading}
                 whileHover={{ scale: isGoogleLoading ? 1 : 1.02 }}
                 whileTap={{ scale: isGoogleLoading ? 1 : 0.98 }}
-                className="w-full border-2 border-muted hover:border-primary/30 bg-white hover:bg-muted/20 text-dark py-4 rounded-2xl font-roboto text-lg transition-all duration-300 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
+                className="w-full border-2 border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 text-gray-700 py-4 rounded-2xl font-medium text-lg transition-all duration-300 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isGoogleLoading ? (
                   <div className="flex items-center justify-center space-x-2">
@@ -418,7 +417,7 @@ export default function LogInPage() {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                       />
                     </svg>
-                    <span className="font-notosans-light">Signin with Google</span>
+                    <span className="font-notosans-light">Sign in with Google</span>
                   </>
                 )}
               </motion.button>

@@ -1,5 +1,5 @@
 import DetailedPost from "@/components/DetailedPost";
-import { getPost } from "@/lib/actions/posts";
+import { getPost } from "@/lib/actions/postActions";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -21,7 +21,7 @@ export async function generateMetadata({ params }) {
         title: `${post.title} | Muslifie Community`,
         description,
         keywords: post.tags || [],
-        authors: [{ name: post.userInfo?.fullName || "Anonymous" }],
+        authors: [{ name: post.userRef?.fullName || "Anonymous" }],
         openGraph: {
           title: post.title,
           description,

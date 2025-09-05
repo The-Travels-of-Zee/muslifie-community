@@ -1,7 +1,8 @@
+import { useAuthStore } from "@/stores/useAuthStore";
 import { Heart, MessageCircle, Sparkles } from "lucide-react";
 import { FaRegThumbsDown, FaRegThumbsUp } from "react-icons/fa";
+import { useRouter } from "next/navigation";
 
-// Update PostActions component to handle loading state
 export const PostActions = ({
   post,
   isLiked,
@@ -17,6 +18,18 @@ export const PostActions = ({
   likesLoading,
   votesLoading,
 }) => {
+  const user = useAuthStore((state) => state.user);
+  const router = useRouter();
+
+  // ✅ wrapper to ensure login check
+  const requireAuth = (action) => {
+    if (!user) {
+      router.push("/login");
+      return;
+    }
+    action();
+  };
+
   return (
     <div
       className={`px-4 py-4 ${
@@ -25,10 +38,10 @@ export const PostActions = ({
     >
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
-          {/* Enhanced Voting */}
+          {/* Voting */}
           <div className="flex items-center bg-white rounded-full shadow-sm border border-slate-200 overflow-hidden">
             <button
-              onClick={() => handleVote("up")}
+              onClick={() => requireAuth(() => handleVote("up"))}
               disabled={votesLoading}
               className={`flex items-center space-x-2 px-2 py-2 transition-all font-medium
               ${
@@ -46,7 +59,7 @@ export const PostActions = ({
             <div className="w-px h-6 bg-slate-200"></div>
 
             <button
-              onClick={() => handleVote("down")}
+              onClick={() => requireAuth(() => handleVote("down"))}
               disabled={votesLoading}
               className={`flex items-center space-x-2 px-4 py-2 transition-all font-medium
               ${
@@ -62,9 +75,9 @@ export const PostActions = ({
             </button>
           </div>
 
-          {/* Enhanced Comments */}
+          {/* Comments */}
           <button
-            onClick={() => toggleComments(post.id)}
+            onClick={() => requireAuth(() => toggleComments(post.id))}
             className="flex items-center space-x-2 px-2 py-2 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-600 hover:text-blue-600 rounded-full transition-all hover:scale-105 shadow-sm"
           >
             <MessageCircle className="w-4 h-4" />
@@ -72,9 +85,9 @@ export const PostActions = ({
             <span className="text-xs">{commentsCount === 1 ? "comment" : "comments"}</span>
           </button>
 
-          {/* Enhanced Like with loading state */}
+          {/* Like */}
           <button
-            onClick={handleLike}
+            onClick={() => requireAuth(handleLike)}
             disabled={likesLoading}
             className={`flex items-center space-x-2 px-4 py-2 border rounded-full transition-all hover:scale-105 shadow-sm ${
               likesLoading

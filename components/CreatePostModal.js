@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   X,
   Image,
@@ -14,8 +14,9 @@ import {
   Users,
   Lock,
   Globe2Icon,
+  User,
 } from "lucide-react";
-import { createPost } from "@/lib/actions/posts";
+import { createPost } from "@/lib/actions/postActions";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
@@ -31,85 +32,137 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
   const [dragOver, setDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
+  const [previewUrls, setPreviewUrls] = useState({ images: [], videos: [] });
+
   const fileInputRef = useRef(null);
   const videoInputRef = useRef(null);
+  const objectUrlsRef = useRef(new Set()); // Track all object URLs for cleanup
 
   const user = useAuthStore((state) => state.user);
 
-  const handleFileUpload = (files, type = "image") => {
-    const fileArray = Array.from(files);
-
-    // Validate file size (10MB limit for videos, 5MB for images)
-    const maxSize = type === "video" ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
-    const oversizedFiles = fileArray.filter((file) => file.size > maxSize);
-
-    if (oversizedFiles.length > 0) {
-      setError(`Some files are too large. Please use files smaller than ${type === "video" ? "10MB" : "5MB"}.`);
-      return;
-    }
-
-    // Validate file types
-    const validImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-    const validVideoTypes = ["video/mp4", "video/webm", "video/mov", "video/avi"];
-
-    const invalidFiles = fileArray.filter((file) => {
-      if (type === "image") return !validImageTypes.includes(file.type);
-      if (type === "video") return !validVideoTypes.includes(file.type);
-      return true;
+  // Cleanup function for object URLs
+  const cleanupObjectUrls = useCallback(() => {
+    objectUrlsRef.current.forEach((url) => {
+      URL.revokeObjectURL(url);
     });
+    objectUrlsRef.current.clear();
+  }, []);
 
-    if (invalidFiles.length > 0) {
-      setError(`Some files have invalid formats. Please use supported ${type} formats.`);
-      return;
-    }
+  // Create preview URL and track it
+  const createPreviewUrl = useCallback((file) => {
+    const url = URL.createObjectURL(file);
+    objectUrlsRef.current.add(url);
+    return url;
+  }, []);
 
-    // Add files to state - we'll upload them when submitting
-    if (type === "image") {
+  const handleFileUpload = useCallback(
+    (files, type = "image") => {
+      const fileArray = Array.from(files);
+
+      // Validate file size (10MB limit for videos, 5MB for images)
+      const maxSize = type === "video" ? 10 * 1024 * 1024 : 5 * 1024 * 1024;
+      const oversizedFiles = fileArray.filter((file) => file.size > maxSize);
+
+      if (oversizedFiles.length > 0) {
+        setError(`Some files are too large. Please use files smaller than ${type === "video" ? "10MB" : "5MB"}.`);
+        return;
+      }
+
+      // Validate file types
+      const validImageTypes = ["image/jpeg", "image/png", "image/gif", "image/webp"];
+      const validVideoTypes = ["video/mp4", "video/webm", "video/mov", "video/avi"];
+
+      const invalidFiles = fileArray.filter((file) => {
+        if (type === "image") return !validImageTypes.includes(file.type);
+        if (type === "video") return !validVideoTypes.includes(file.type);
+        return true;
+      });
+
+      if (invalidFiles.length > 0) {
+        setError(`Some files have invalid formats. Please use supported ${type} formats.`);
+        return;
+      }
+
+      // Create preview URLs for new files
+      const newPreviewUrls = fileArray.map((file) => createPreviewUrl(file));
+
+      // Add files to state
       setNewPost((prev) => ({
         ...prev,
-        images: [...prev.images, ...fileArray],
+        [type === "image" ? "images" : "videos"]: [...prev[type === "image" ? "images" : "videos"], ...fileArray],
       }));
-    } else if (type === "video") {
+
+      // Update preview URLs
+      setPreviewUrls((prev) => ({
+        ...prev,
+        [type === "image" ? "images" : "videos"]: [...prev[type === "image" ? "images" : "videos"], ...newPreviewUrls],
+      }));
+
+      // Clear any previous errors
+      setError("");
+    },
+    [createPreviewUrl]
+  );
+
+  const handleDrop = useCallback(
+    (e) => {
+      e.preventDefault();
+      setDragOver(false);
+      setError("");
+
+      const files = e.dataTransfer.files;
+      const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
+      const videoFiles = Array.from(files).filter((file) => file.type.startsWith("video/"));
+
+      if (imageFiles.length > 0) handleFileUpload(imageFiles, "image");
+      if (videoFiles.length > 0) handleFileUpload(videoFiles, "video");
+    },
+    [handleFileUpload]
+  );
+
+  const removeImage = useCallback(
+    (index) => {
+      // Revoke the object URL
+      const urlToRevoke = previewUrls.images[index];
+      if (urlToRevoke) {
+        URL.revokeObjectURL(urlToRevoke);
+        objectUrlsRef.current.delete(urlToRevoke);
+      }
+
       setNewPost((prev) => ({
         ...prev,
-        videos: [...prev.videos, ...fileArray],
+        images: prev.images.filter((_, i) => i !== index),
       }));
-    }
 
-    // Clear any previous errors
-    setError("");
-  };
+      setPreviewUrls((prev) => ({
+        ...prev,
+        images: prev.images.filter((_, i) => i !== index),
+      }));
+    },
+    [previewUrls.images]
+  );
 
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragOver(false);
-    setError("");
+  const removeVideo = useCallback(
+    (index) => {
+      // Revoke the object URL
+      const urlToRevoke = previewUrls.videos[index];
+      if (urlToRevoke) {
+        URL.revokeObjectURL(urlToRevoke);
+        objectUrlsRef.current.delete(urlToRevoke);
+      }
 
-    const files = e.dataTransfer.files;
-    const imageFiles = Array.from(files).filter((file) => file.type.startsWith("image/"));
-    const videoFiles = Array.from(files).filter((file) => file.type.startsWith("video/"));
+      setNewPost((prev) => ({
+        ...prev,
+        videos: prev.videos.filter((_, i) => i !== index),
+      }));
 
-    if (imageFiles.length > 0) handleFileUpload(imageFiles, "image");
-    if (videoFiles.length > 0) handleFileUpload(videoFiles, "video");
-  };
-
-  const removeImage = (index) => {
-    setNewPost((prev) => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
-  };
-
-  const removeVideo = (index) => {
-    setNewPost((prev) => ({
-      ...prev,
-      videos: prev.videos.filter((_, i) => i !== index),
-    }));
-  };
-
-  const getFilePreview = (file) => {
-    return URL.createObjectURL(file);
-  };
+      setPreviewUrls((prev) => ({
+        ...prev,
+        videos: prev.videos.filter((_, i) => i !== index),
+      }));
+    },
+    [previewUrls.videos]
+  );
 
   const handleSubmit = async () => {
     if (!newPost.content.trim() && !newPost.title.trim()) {
@@ -133,24 +186,31 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
         .filter((tag) => tag.length > 0) // Remove empty tags
         .map((tag) => tag.toLowerCase()); // Normalize to lowercase
 
+      // Create a clean post data object without circular references
       const postData = {
         title: newPost.title.trim(),
         content: newPost.content.trim(),
         location: newPost.location.trim(),
         tags: parsedTags,
-        images: newPost.images, // Send File objects
-        videos: newPost.videos, // Send File objects
-        userId: user.id,
-        userInfo: {
-          name: user.displayName || user.fullName || user.email?.split("@")[0] || "Anonymous",
-          profileImage: user.photoURL || user.profileImage || "👤",
-          email: user.email,
-        },
+        images: newPost.images, // File objects
+        videos: newPost.videos, // File objects
       };
 
-      const result = await createPost(postData);
+      // Create a clean user object without potential circular references
+      const cleanUser = {
+        id: user.id,
+        email: user.email,
+        fullName: user.fullName,
+        photoURL: user.photoURL,
+        profileImage: user.profileImage,
+      };
+
+      const result = await createPost(postData, cleanUser);
 
       if (result.success) {
+        // Clean up object URLs
+        cleanupObjectUrls();
+
         // Reset form
         setNewPost({
           title: "",
@@ -161,20 +221,25 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
           location: "",
         });
 
-        // Clean up object URLs
-        newPost.images.forEach((file) => {
-          if (file instanceof File) {
-            URL.revokeObjectURL(getFilePreview(file));
-          }
-        });
-        newPost.videos.forEach((file) => {
-          if (file instanceof File) {
-            URL.revokeObjectURL(getFilePreview(file));
-          }
-        });
+        setPreviewUrls({ images: [], videos: [] });
 
         if (handleCreatePost) {
-          handleCreatePost(result.post);
+          // Create a clean post object for the callback
+          const cleanPost = {
+            id: result.postId,
+            title: result.post.title,
+            content: result.post.content,
+            images: result.post.images,
+            videos: result.post.videos,
+            tags: result.post.tags,
+            likes: result.post.likes,
+            upvotes: result.post.upvotes,
+            downvotes: result.post.downvotes,
+            createdAt: result.post.createdAt,
+            updatedAt: result.post.updatedAt,
+            user: cleanUser,
+          };
+          handleCreatePost(cleanPost);
         }
 
         handleCloseCreatePost();
@@ -191,21 +256,12 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
 
   const isValid = (newPost.content.trim() || newPost.title.trim()) && !isSubmitting;
 
-  // Clean up object URLs on unmount
+  // Clean up object URLs on unmount and when files change
   useEffect(() => {
     return () => {
-      newPost.images.forEach((file) => {
-        if (file instanceof File) {
-          URL.revokeObjectURL(getFilePreview(file));
-        }
-      });
-      newPost.videos.forEach((file) => {
-        if (file instanceof File) {
-          URL.revokeObjectURL(getFilePreview(file));
-        }
-      });
+      cleanupObjectUrls();
     };
-  }, []);
+  }, [cleanupObjectUrls]);
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
@@ -243,7 +299,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
                 />
               ) : null}
               <span className="text-xl" style={{ display: user?.photoURL || user?.profileImage ? "none" : "block" }}>
-                {user?.profileImage || "👤"}
+                {user?.profileImage || <User className="w-6 h-6 text-slate-600" />}
               </span>
             </div>
             <div className="flex-1">
@@ -274,7 +330,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
           <div className="mb-4">
             <input
               type="text"
-              placeholder="What's on your mind?"
+              placeholder="Ask a question"
               value={newPost.title}
               onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
               className="w-full text-xl font-medium placeholder-slate-400 border-none outline-none resize-none bg-transparent"
@@ -286,7 +342,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
           {/* Content Textarea */}
           <div className="mb-4">
             <textarea
-              placeholder="Share your thoughts, experiences, or ask a question..."
+              placeholder="Ask questions/queries for your next Halal Trip..."
               rows={4}
               value={newPost.content}
               onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
@@ -295,6 +351,23 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
               maxLength={2000}
             />
             <div className="text-right text-xs text-slate-400 mt-1">{newPost.content.length}/2000 characters</div>
+          </div>
+
+          {/* Additional Options */}
+          <div className="space-y-3">
+            {/* Tags */}
+            <div className="flex items-center space-x-3 p-3 bg-slate-50/50 rounded-lg">
+              <Hash className="w-5 h-5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Add tags (separate with commas: travel, islam, halal)"
+                value={newPost.tags}
+                onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
+                className="flex-1 bg-transparent border-none outline-none text-slate-700 placeholder-slate-400"
+                disabled={isSubmitting}
+                maxLength={200}
+              />
+            </div>
           </div>
 
           {/* File Upload Area */}
@@ -344,9 +417,9 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
               <h4 className="text-sm font-medium text-slate-700 mb-2">Images ({newPost.images.length})</h4>
               <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
                 {newPost.images.map((file, index) => (
-                  <div key={index} className="relative group">
+                  <div key={`image-${index}-${file.name}`} className="relative group">
                     <img
-                      src={getFilePreview(file)}
+                      src={previewUrls.images[index]}
                       alt={`Upload ${index + 1}`}
                       className="w-full h-32 object-cover rounded-lg"
                     />
@@ -373,8 +446,8 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
               <h4 className="text-sm font-medium text-slate-700 mb-2">Videos ({newPost.videos.length})</h4>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {newPost.videos.map((file, index) => (
-                  <div key={index} className="relative group">
-                    <video src={getFilePreview(file)} className="w-full h-32 object-cover rounded-lg" controls />
+                  <div key={`video-${index}-${file.name}`} className="relative group">
+                    <video src={previewUrls.videos[index]} className="w-full h-32 object-cover rounded-lg" controls />
                     <button
                       type="button"
                       onClick={() => removeVideo(index)}
@@ -391,23 +464,6 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
               </div>
             </div>
           )}
-
-          {/* Additional Options */}
-          <div className="space-y-3">
-            {/* Tags */}
-            <div className="flex items-center space-x-3 p-3 bg-slate-50/50 rounded-lg">
-              <Hash className="w-5 h-5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Add tags (separate with commas: travel, islam, halal)"
-                value={newPost.tags}
-                onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
-                className="flex-1 bg-transparent border-none outline-none text-slate-700 placeholder-slate-400"
-                disabled={isSubmitting}
-                maxLength={200}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Footer */}

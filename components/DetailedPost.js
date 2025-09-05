@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Post from "@/components/Post";
-import { getPost } from "@/lib/actions/posts";
+import { getPost } from "@/lib/actions/postActions";
 import { useAuthStore } from "@/stores/useAuthStore";
 
 function DetailedPost({ slug }) {
@@ -16,7 +16,6 @@ function DetailedPost({ slug }) {
   const router = useRouter();
   const { user: currentUser } = useAuthStore();
 
-  // Extract post ID
   const extractPostId = (slug) => slug.split("-").pop();
 
   useEffect(() => {
@@ -30,7 +29,7 @@ function DetailedPost({ slug }) {
         } else {
           setError(result.error);
         }
-      } catch (err) {
+      } catch {
         setError("Failed to load post");
       } finally {
         setLoading(false);
@@ -44,7 +43,6 @@ function DetailedPost({ slug }) {
     const date = new Date(dateString);
     const now = new Date();
     const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
-
     if (diffInHours < 1) return "just now";
     if (diffInHours < 24) return `${diffInHours}h ago`;
     return `${Math.floor(diffInHours / 24)}d ago`;
@@ -64,18 +62,14 @@ function DetailedPost({ slug }) {
     }));
   };
 
-  const handleBackClick = () => {
-    router.back();
-  };
+  const handleBackClick = () => router.back();
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="max-w-7xl mx-auto px-2 py-6">
-          <div className="flex justify-center items-center py-20">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-            <span className="ml-3 text-gray-600">Loading post...</span>
-          </div>
+      <div className="min-h-screen bg-slate-50 flex justify-center items-center">
+        <div className="flex flex-col items-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <span className="mt-3 text-gray-600">Loading post...</span>
         </div>
       </div>
     );
@@ -83,18 +77,16 @@ function DetailedPost({ slug }) {
 
   if (error || !post) {
     return (
-      <div className="min-h-screen bg-slate-50">
-        <div className="max-w-7xl mx-auto px-2 py-6">
-          <div className="text-center py-20">
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Post Not Found</h2>
-            <p className="text-gray-600 mb-6">{error || "The post you're looking for doesn't exist."}</p>
-            <button
-              onClick={handleBackClick}
-              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-            >
-              Go Back
-            </button>
-          </div>
+      <div className="min-h-screen bg-slate-50 flex justify-center items-center">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-4">Post Not Found</h2>
+          <p className="text-gray-600 mb-6">{error || "The post you're looking for doesn't exist."}</p>
+          <button
+            onClick={handleBackClick}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Go Back
+          </button>
         </div>
       </div>
     );
@@ -102,9 +94,14 @@ function DetailedPost({ slug }) {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <div className="max-w-7xl mx-auto px-2 py-6 md:flex gap-4 items-start">
-        <div className="flex-1">
-          {/* Back button */}
+      <div className="max-w-7xl mx-auto px-2 py-6 flex gap-6">
+        {/* Sidebar */}
+        <div className="hidden lg:flex lg:flex-col w-80 flex-shrink-0">
+          <Sidebar />
+        </div>
+
+        {/* Post content */}
+        <div className="flex-1 space-y-4">
           <button
             onClick={handleBackClick}
             className="flex items-center text-blue-600 hover:text-blue-800 mb-4 transition-colors"
@@ -114,20 +111,16 @@ function DetailedPost({ slug }) {
             </svg>
             Back to posts
           </button>
+
           <Post
             post={post}
             expandedComments={expandedComments}
             toggleComments={toggleComments}
             formatTimeAgo={formatTimeAgo}
-            onPostUpdate={() => {
-              // Optionally refresh the specific post or do nothing
-              console.log("Post updated:", post.id);
-            }}
+            onPostUpdate={() => console.log("Post updated:", post.id)}
             currentUser={currentUser}
           />
         </div>
-
-        <Sidebar />
       </div>
     </div>
   );
