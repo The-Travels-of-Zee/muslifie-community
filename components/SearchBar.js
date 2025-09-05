@@ -214,7 +214,7 @@ const SearchBar = () => {
                         </p>
                       )}
                       <div className="flex items-center space-x-2 mt-2">
-                        <span className="text-xs text-slate-500">by {post.userRef?.fullName || "Unknown User"}</span>
+                        <span className="text-xs text-slate-500">by {post.user?.fullName || "Unknown User"}</span>
                         {post.tags && post.tags.length > 0 && (
                           <div className="flex items-center space-x-1">
                             <span className="text-xs text-slate-400">•</span>

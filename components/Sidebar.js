@@ -178,7 +178,7 @@ const Sidebar = () => {
           Join our vibrant community to share your travel experiences, discover hidden gems, and connect with fellow
           explorers.
         </p>
-        <div className="space-y-3">
+        <div className="flex flex-col space-y-2">
           <Link href="/signup">
             <button className="w-full bg-secondary text-white py-3 px-4 rounded-lg font-semibold hover:bg-secondary/90">
               <UserPlus className="w-5 h-5 inline mr-2" />

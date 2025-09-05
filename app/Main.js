@@ -8,6 +8,7 @@ import { getPosts } from "@/lib/actions/postActions";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { formatTimeAgo } from "@/lib/utils";
 import { Plus } from "lucide-react";
+import { useRouter } from "next/navigation";
 
 const Main = () => {
   const [posts, setPosts] = useState([]);
@@ -18,7 +19,18 @@ const Main = () => {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [expandedComments, setExpandedComments] = useState({});
 
-  const { user: currentUser } = useAuthStore();
+  const router = useRouter();
+
+  // Get auth state from Zustand store
+  const { user: currentUser, isAuthenticated } = useAuthStore();
+
+  const handleCreatePostClick = () => {
+    if (isAuthenticated) {
+      setShowCreatePost(true);
+    } else {
+      router.push("/login");
+    }
+  };
 
   // Load posts
   const loadPosts = async (isInitial = false) => {
@@ -101,11 +113,11 @@ const Main = () => {
         {/* Posts Column */}
         <div className="flex-1 space-y-6">
           {posts.length === 0 ? (
-            <div className="text-center py-20">
-              <p className="text-gray-500">No posts found. Create the first one!</p>
+            <div className="min-h-screen flex flex-col items-center">
+              <p className="text-gray-500 mb-4 text-center">No posts found. Create the first one!</p>
               <button
-                onClick={() => setShowCreatePost(true)}
-                className="hidden sm:flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+                onClick={handleCreatePostClick}
+                className="flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
               >
                 <Plus className="w-4 h-4" />
                 <span className="font-medium">Create Post</span>

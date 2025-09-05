@@ -434,7 +434,6 @@ export default function ImprovedSettingsPage() {
                     <div className="flex items-center justify-between">
                       <div>
                         <p className="font-medium text-gray-900">Password</p>
-                        <p className="text-sm text-gray-500">Last updated 3 months ago</p>
                       </div>
                       <button
                         onClick={() => router.push("/reset-password")}

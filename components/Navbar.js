@@ -2,17 +2,16 @@
 import { useState, useRef, useEffect } from "react";
 import { Bell, Plus, Menu, X, Bookmark, FileText, LogIn, UserPlus, Settings, LogOut } from "lucide-react";
 import CreatePost from "./CreatePostModal";
-import Notifications from "./Notifications";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore"; // Adjust path as needed
 import SearchBar from "./SearchBar"; // ✅ import SearchBar
+import NotificationBell from "./NotificationBell";
 
 const Navbar = () => {
   const [isUserDropdownOpen, setIsUserDropdownOpen] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
-  const [showNotifications, setShowNotifications] = useState(false);
 
   const dropdownRef = useRef(null);
   const router = useRouter();
@@ -132,14 +131,7 @@ const Navbar = () => {
               ) : isAuthenticated ? (
                 <>
                   {/* Notifications */}
-                  <button
-                    onClick={() => setShowNotifications(true)}
-                    className="relative p-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
-                  >
-                    <Bell className="w-5 h-5" />
-                    <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-                  </button>
-                  {renderUserProfile()}
+                  <NotificationBell />
                 </>
               ) : (
                 <div className="hidden sm:block">{renderAuthButtons()}</div>
@@ -167,9 +159,6 @@ const Navbar = () => {
           }}
         />
       )}
-
-      {/* Notifications */}
-      {isAuthenticated && <Notifications isOpen={showNotifications} onClose={() => setShowNotifications(false)} />}
 
       {/* Mobile Sidebar (unchanged) */}
       {showSidebar && (

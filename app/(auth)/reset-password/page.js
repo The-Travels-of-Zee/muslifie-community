@@ -6,6 +6,7 @@ import { z } from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { sendPasswordResetEmail, resetPassword } from "@/lib/actions/authActions";
+import { useAuthStore } from "@/stores/useAuthStore";
 
 // Zod validation schemas
 const emailSchema = z.object({
@@ -27,6 +28,7 @@ const resetPasswordSchema = z
   });
 
 export default function ResetPasswordPage() {
+  const { logout } = useAuthStore();
   const router = useRouter();
   const inputRefs = useRef([]);
 
@@ -141,6 +143,7 @@ export default function ResetPasswordPage() {
 
       if (result.success) {
         setStep(3);
+        await logout();
         // Redirect to login after 3 seconds
         setTimeout(() => {
           router.push("/login");
