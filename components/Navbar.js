@@ -1,6 +1,19 @@
 "use client";
 import { useState, useRef, useEffect } from "react";
-import { Bell, Plus, Menu, X, Bookmark, FileText, LogIn, UserPlus, Settings, LogOut } from "lucide-react";
+import {
+  Bell,
+  Plus,
+  Menu,
+  X,
+  Bookmark,
+  FileText,
+  LogIn,
+  UserPlus,
+  Settings,
+  LogOut,
+  MessageCircle,
+  Heart,
+} from "lucide-react";
 import CreatePost from "./CreatePostModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,9 +33,11 @@ const Navbar = () => {
   const { user, isAuthenticated, isLoading, logout } = useAuthStore();
 
   const links = [
-    { label: "My Posts", icon: FileText },
-    { label: "Saved Posts", icon: Bookmark },
-    { label: "Settings", icon: Settings },
+    { label: "My Posts", icon: FileText, href: "/my-posts" },
+    { label: "Saved Posts", icon: Bookmark, href: "/saved-posts" },
+    { label: "Liked Posts", icon: Heart, href: "/liked-posts" },
+    { label: "My Comments", icon: MessageCircle, href: "/my-comments" },
+    { label: "Settings", icon: Settings, href: "/settings" },
   ];
 
   // Close dropdowns on outside click
@@ -258,30 +273,27 @@ const Navbar = () => {
               {isAuthenticated && (
                 <>
                   {/* Notifications Button for Mobile */}
-                  <button
-                    onClick={() => {
-                      setShowNotifications(true);
-                      setShowSidebar(false);
-                    }}
-                    className="flex items-center justify-between w-full px-4 py-3 text-left text-slate-700 bg-primary/10 active:text-primary rounded-lg"
+                  <Link
+                    href="/notifications"
+                    className="flex items-center justify-between w-full px-2 py-1 text-left text-slate-700 bg-primary/10 active:text-primary rounded-lg"
                   >
                     <div className="flex items-center space-x-3">
-                      <Bell className="w-5 h-5" />
+                      <NotificationBell />
                       <span className="font-medium">Notifications</span>
                     </div>
-                    <div className="w-2 h-2 bg-red-500 rounded-full"></div>
-                  </button>
+                  </Link>
 
                   {links.map((link, index) => {
                     const Icon = link.icon;
                     return (
-                      <button
+                      <Link
+                        href={link.href}
                         key={index}
                         className="flex items-center space-x-3 w-full px-4 py-3 text-left text-slate-700 bg-primary/10 active:text-primary rounded-lg"
                       >
                         <Icon className="w-5 h-5" />
                         <span className="font-medium">{link.label}</span>
-                      </button>
+                      </Link>
                     );
                   })}
                 </>

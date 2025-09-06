@@ -267,7 +267,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-200/50">
+        <div className="flex items-center justify-between p-4 border-b border-slate-200/50">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-primary/10 rounded-lg">
               <FileText className="w-5 h-5 text-primary" />
@@ -284,7 +284,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
         </div>
 
         {/* User Info */}
-        <div className="px-6 pt-4 pb-2">
+        <div className="px-6 py-4">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center overflow-hidden">
               {user?.photoURL || user?.profileImage ? (
@@ -307,7 +307,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
                 {user?.fullName || user?.email?.split("@")[0] || "Anonymous"}
               </h3>
               <div className="flex items-center space-x-2">
-                <div className="text-sm text-slate-600 bg-slate-100 border-none rounded-lg px-2 py-1">
+                <div className="text-sm text-slate-600 bg-slate-100 border-none rounded-lg py-1">
                   <span className="flex items-center space-x-1">
                     <Globe2Icon className="w-4 h-4" /> <span>Public</span>
                   </span>
@@ -333,7 +333,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
               placeholder="Ask a question"
               value={newPost.title}
               onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-              className="w-full text-xl font-medium placeholder-slate-400 border-none outline-none resize-none bg-transparent"
+              className="w-full text-xl font-medium placeholder-slate-400 bg-white p-2 rounded-lg border-none outline-none resize-none"
               disabled={isSubmitting}
               maxLength={200}
             />
@@ -346,7 +346,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
               rows={4}
               value={newPost.content}
               onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-              className="w-full text-slate-700 placeholder-slate-400 border-none outline-none resize-none bg-transparent"
+              className="w-full text-slate-700 placeholder-slate-400 bg-white p-2 rounded-lg border-none outline-none resize-none"
               disabled={isSubmitting}
               maxLength={2000}
             />
@@ -363,7 +363,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
                 placeholder="Add tags (separate with commas: travel, islam, halal)"
                 value={newPost.tags}
                 onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
-                className="flex-1 bg-transparent border-none outline-none text-slate-700 placeholder-slate-400"
+                className="flex-1 bg-white p-2 rounded-lg border-none outline-none text-slate-700 placeholder-slate-400"
                 disabled={isSubmitting}
                 maxLength={200}
               />

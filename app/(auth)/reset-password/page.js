@@ -172,7 +172,7 @@ export default function ResetPasswordPage() {
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 flex items-center justify-center p-4">
       <div className="w-full max-w-6xl grid lg:grid-cols-2 bg-white rounded-3xl shadow-2xl overflow-hidden">
         {/* Left Side - Welcome Section */}
-        <div className="bg-gradient-to-br from-secondary to-primary py-12 px-8 lg:py-24 lg:px-12 text-white relative overflow-hidden flex flex-col justify-center">
+        <div className="bg-gradient-to-br from-secondary to-primary py-12 px-8 lg:py-24 lg:px-12 text-white relative overflow-hidden flex flex-col justify-center items-center lg:items-start">
           {/* Back Button */}
           <Link href="/login" className="absolute top-8 left-8 p-2 hover:bg-white/20 rounded-full transition-colors">
             <ArrowLeft className="w-6 h-6" />
@@ -182,7 +182,7 @@ export default function ResetPasswordPage() {
           <div className="absolute top-20 right-20 w-32 h-32 bg-white/10 rounded-full blur-sm" />
           <div className="absolute bottom-20 left-20 w-24 h-24 bg-white/10 rounded-full blur-sm" />
 
-          <div className="relative z-10">
+          <div className="relative z-10 flex flex-col items-center lg:items-start">
             {/* Logo */}
             <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-8">
               <div className="w-12 h-12 bg-secondary rounded-full flex items-center justify-center">

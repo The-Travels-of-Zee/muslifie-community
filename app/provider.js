@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { usePathname, useRouter } from "next/navigation";
 
-const PUBLIC_ROUTES = new Set(["/", "/search"]);
-const AUTH_ROUTES = new Set(["/login", "/signup", "/otp-confirm"]);
+const PUBLIC_ROUTES = new Set(["/", "/search", "/reset-password", "/otp-confirm"]);
+const AUTH_ROUTES = new Set(["/login", "/signup"]);
 
 // Routes that match patterns (like /post/[id])
 const isPublicPatternRoute = (path) => {
