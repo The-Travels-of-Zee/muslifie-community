@@ -157,8 +157,15 @@ const Sidebar = () => {
             <h4 className="font-semibold text-amber-900">Download Muslifie App</h4>
           </div>
           <div className="flex flex-col space-y-4 items-center">
-            <img src="/stores/app-store.svg" alt="App Store" className="h-12" />
-            <img src="/stores/google-play.svg" alt="Google Play" className="h-12" />
+            <Link href="https://apps.apple.com/pk/app/muslifie/id6749224199" target="_blank">
+              <img src="/stores/app-store.svg" alt="App Store" className="h-12" />
+            </Link>
+            <Link
+              href="https://play.google.com/store/apps/details?id=com.app.muslifie&pcampaignid=web_share"
+              target="_blank"
+            >
+              <img src="/stores/google-play.svg" alt="Google Play" className="h-12" />
+            </Link>
           </div>
         </div>
       </aside>

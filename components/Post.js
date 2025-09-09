@@ -14,6 +14,9 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  FlagTriangleRight,
+  Trash,
+  Pencil,
 } from "lucide-react";
 
 import {
@@ -23,11 +26,13 @@ import {
   checkUserVote,
   togglePostSave,
   checkUserSave,
+  deletePost,
 } from "@/lib/actions/postActions";
 import { getCommentsCount } from "@/lib/actions/commentActions";
 import { PostActions } from "./PostActions";
+import CreateEditPostModal from "./CreateEditPostModal";
 
-const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpdate, currentUser }) => {
+const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpdated, currentUser }) => {
   const router = useRouter();
   const pathname = usePathname();
 
@@ -49,6 +54,24 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
   const [showModal, setShowModal] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
 
+  // Edit Post Modal state and functions
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+
+  const handleOpenEditModal = () => {
+    setIsEditModalOpen(true);
+  };
+
+  const handleCloseEditModal = () => {
+    setIsEditModalOpen(false);
+  };
+
+  const handlePostUpdated = (updatedPost) => {
+    if (onPostUpdated) {
+      onPostUpdated(updatedPost);
+    }
+    setIsEditModalOpen(false);
+  };
+
   // Memoized values
   const mediaItems = useMemo(
     () => [
@@ -66,9 +89,25 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
   }, [post.upvotes, commentsCount]);
 
   // Handlers
-  const handleNavigate = useCallback(() => {
-    if (pathname === "/") router.push(`/post/${post.id}`);
-  }, [pathname, router, post.id]);
+  const handleNavigate = useCallback(
+    (options = {}) => {
+      if (!post?.id) return;
+
+      // Options (override defaults)
+      const {
+        basePath = "/post", // default base route
+        allowSamePage = false, // allow navigating even if already on the same page
+      } = options;
+
+      const targetPath = `${basePath}/${post.id}`;
+
+      // Avoid unnecessary push if already there
+      if (!allowSamePage && pathname === targetPath) return;
+
+      router.push(targetPath);
+    },
+    [pathname, router, post?.id]
+  );
 
   const handleLike = useCallback(async () => {
     if (!currentUser) return;
@@ -162,6 +201,25 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
     }
   }, [isBookmarked, currentUser, post.id, savesCount]);
 
+  // Delete a post from database
+  const handleDelete = async () => {
+    if (!window.confirm("Are you sure you want to delete this post?")) return;
+
+    try {
+      const result = await deletePost(post.id, currentUser.id);
+      if (result.success) {
+        alert("Post deleted successfully");
+        router.push("/my-posts");
+        router.refresh();
+      } else {
+        alert(result.error || "Failed to delete post");
+      }
+    } catch (error) {
+      console.error("Delete error:", error);
+      alert("Something went wrong. Please try again.");
+    }
+  };
+
   // Modal controls
   const openModal = useCallback((index) => {
     setCurrentMediaIndex(index);
@@ -215,6 +273,14 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
     init();
   }, [post.id, currentUser]);
 
+  useEffect(() => {
+    const initCount = async () => {
+      const count = await getCommentsCount(post.id);
+      setCommentsCount(count);
+    };
+    initCount();
+  }, [post.id]);
+
   const user = post.user || {};
 
   return (
@@ -241,23 +307,33 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
         )}
 
         {/* Header */}
-        <div className="p-4" onClick={handleNavigate}>
+        <div className="p-4" onClick={() => handleNavigate({ allowSamePage: true })}>
           <div className="flex items-start space-x-4">
             <div className="min-w-0 w-full">
               <div className="flex items-center justify-between space-x-2 mb-4">
                 <div className="relative flex gap-3 items-center">
                   <div
-                    className={`flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-full text-xl transition-transform ${
+                    className={`w-14 h-14 flex items-center justify-center rounded-full transition-transform ${
                       engagementLevel === "high"
                         ? "bg-gradient-to-br from-yellow-100 to-orange-100 ring-2 ring-yellow-300"
                         : "bg-gradient-to-br from-slate-100 to-slate-200"
                     }`}
                   >
-                    {user?.profileImage !== "" ? (
-                      <img src={user?.profileImage} alt="User Avatar" className="w-12 h-12 rounded-full object-cover" />
-                    ) : (
-                      <User className="w-6 h-6 text-slate-600" />
-                    )}
+                    <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-primary to-primary/80">
+                      {user?.profileImage ? (
+                        <img src={user.profileImage} alt="user" className="w-full h-full object-cover" />
+                      ) : (
+                        <span className="text-white font-semibold text-lg">
+                          {user?.fullName
+                            ? user.fullName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .toUpperCase()
+                            : "U"}
+                        </span>
+                      )}
+                    </div>
                   </div>
                   <div>
                     <h3 className="flex gap-2 items-center font-bold text-slate-900">
@@ -298,12 +374,38 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
                         className="w-full flex items-center space-x-3 px-4 py-2 text-left text-slate-700 hover:bg-slate-50 transition-colors"
                       >
                         <Bookmark className={`w-4 h-4 ${isBookmarked ? "text-yellow-600 fill-current" : ""}`} />
-                        <span>{isBookmarked ? "Remove bookmark" : "Bookmark post"}</span>
+                        <span>{isBookmarked ? "Remove Saved" : "Save post"}</span>
                       </button>
+                      {currentUser.id === user.id && (
+                        <>
+                          <button
+                            className="mt-2 w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-900 hover:bg-red-50 transition-colors"
+                            onClick={handleOpenEditModal}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            <span>Edit</span>
+                          </button>
+                          {isEditModalOpen && (
+                            <CreateEditPostModal
+                              handleCloseModal={handleCloseEditModal}
+                              handleEditPost={handlePostUpdated}
+                              editingPost={post}
+                              isEditing={true}
+                            />
+                          )}
+                          <button
+                            onClick={handleDelete}
+                            className="mt-2 w-full flex items-center space-x-3 px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors"
+                          >
+                            <Trash className="h-4 w-4" />
+                            <span>Delete</span>
+                          </button>
+                        </>
+                      )}
                       <hr className="my-2 border-slate-100" />
-                      <button className="w-full flex items-center space-x-3 px-4 py-2 text-left text-red-600 hover:bg-red-50 transition-colors">
-                        <span>🚫</span>
-                        <span>Report post</span>
+                      <button className="w-full flex items-center space-x-3 px-4 py-2 text-left text-red-800 hover:bg-red-50 transition-colors">
+                        <FlagTriangleRight className="h-4 w-4" />
+                        <span>Report</span>
                       </button>
                     </div>
                   )}
@@ -314,7 +416,7 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
               <h2
                 onClick={(e) => {
                   e.stopPropagation();
-                  handleNavigate();
+                  handleNavigate({ allowSamePage: true });
                 }}
                 className={`font-bold mb-3 hover:text-primary transition-colors cursor-pointer ${
                   post.title && post.title.length > 50 ? "text-lg sm:text-xl" : "text-xl sm:text-2xl"

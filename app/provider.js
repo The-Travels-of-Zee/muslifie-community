@@ -95,10 +95,10 @@ export function AuthProvider({ children }) {
   // ✅ Show loading screen while auth resolves
   if (!authResolved) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+      <div className="min-h-screen flex items-center justify-center bg-(--secondary-light)/20">
         <div className="text-center">
           <img src="/favicon/logo.png" className="mx-auto mb-4" height={64} width={64} alt="Muslifie logo" />
-          <h1 className="text-2xl font-bold text-slate-900 mb-4">Muslifie Community</h1>
+          <h1 className="text-2xl font-semibold text-slate-700 mb-4">Muslifie Community</h1>
           <div className="w-6 h-6 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
         </div>
       </div>

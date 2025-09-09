@@ -3,10 +3,10 @@ import { getPost } from "@/lib/actions/postActions";
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const postId = slug.split("-").pop();
+  // const postId = slug.split("-").pop();
 
   try {
-    const result = await getPost(postId);
+    const result = await getPost(slug);
 
     if (result?.success && result?.post) {
       const post = result.post;

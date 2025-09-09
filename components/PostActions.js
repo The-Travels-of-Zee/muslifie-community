@@ -243,7 +243,7 @@ export const PostActions = ({
 
           {/* Comments */}
           <button
-            onClick={() => requireAuth(() => toggleComments(post.id))}
+            onClick={() => toggleComments(post.id)} // 🚨 removed requireAuth()
             className="flex items-center space-x-1 px-3 py-2 bg-white hover:bg-blue-50 border border-slate-200 hover:border-blue-200 text-slate-600 hover:text-blue-600 rounded-full text-sm transition-all shadow-sm"
           >
             <MessageCircle className="w-4 h-4" />

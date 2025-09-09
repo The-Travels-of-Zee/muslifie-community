@@ -241,20 +241,27 @@ export default function LogInPage() {
               variants={itemVariants}
               className="mt-10 flex max-w-sm items-center justify-center lg:justify-start space-x-4"
             >
-              <img
-                src="/stores/app-store.svg"
-                width={120}
-                height={120}
-                alt="muslifie-logo"
-                className="inline w-full h-12 lg:h-16"
-              />
-              <img
-                src="/stores/google-play.svg"
-                width={120}
-                height={120}
-                alt="muslifie-logo"
-                className="inline w-full h-12 lg:h-16"
-              />
+              <Link href="https://apps.apple.com/pk/app/muslifie/id6749224199" target="_blank">
+                <img
+                  src="/stores/app-store.svg"
+                  width={120}
+                  height={120}
+                  alt="muslifie-logo"
+                  className="inline w-full h-12 lg:h-16"
+                />
+              </Link>
+              <Link
+                href="https://play.google.com/store/apps/details?id=com.app.muslifie&pcampaignid=web_share"
+                target="_blank"
+              >
+                <img
+                  src="/stores/google-play.svg"
+                  width={120}
+                  height={120}
+                  alt="muslifie-logo"
+                  className="inline w-full h-12 lg:h-16"
+                />
+              </Link>
             </motion.div>
           </div>
         </motion.div>

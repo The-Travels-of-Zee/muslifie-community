@@ -15,19 +15,33 @@ import {
   Lock,
   Globe2Icon,
   User,
+  Edit3,
+  Save,
 } from "lucide-react";
-import { createPost } from "@/lib/actions/postActions";
+import { createPost, editPost } from "@/lib/actions/postActions";
 import { useAuthStore } from "@/stores/useAuthStore";
 
-const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
+const CreateEditPostModal = ({
+  handleCloseModal,
+  handleCreatePost,
+  handleEditPost,
+  editingPost = null, // Pass existing post data when editing
+  isEditing = false,
+}) => {
   const [newPost, setNewPost] = useState({
-    title: "",
-    content: "",
-    images: [],
-    videos: [],
-    tags: "",
-    location: "",
+    title: editingPost?.title || "",
+    content: editingPost?.content || "",
+    images: [], // New images to upload
+    videos: [], // New videos to upload
+    tags: editingPost?.tags?.join(", ") || "",
+    location: editingPost?.location || "",
   });
+
+  // For editing: track existing media and removed items
+  const [existingImages, setExistingImages] = useState(editingPost?.images || []);
+  const [existingVideos, setExistingVideos] = useState(editingPost?.videos || []);
+  const [removedImages, setRemovedImages] = useState([]);
+  const [removedVideos, setRemovedVideos] = useState([]);
 
   const [dragOver, setDragOver] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -120,7 +134,8 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
     [handleFileUpload]
   );
 
-  const removeImage = useCallback(
+  // Remove new uploaded image
+  const removeNewImage = useCallback(
     (index) => {
       // Revoke the object URL
       const urlToRevoke = previewUrls.images[index];
@@ -142,7 +157,8 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
     [previewUrls.images]
   );
 
-  const removeVideo = useCallback(
+  // Remove new uploaded video
+  const removeNewVideo = useCallback(
     (index) => {
       // Revoke the object URL
       const urlToRevoke = previewUrls.videos[index];
@@ -164,6 +180,18 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
     [previewUrls.videos]
   );
 
+  // Remove existing image (for editing)
+  const removeExistingImage = useCallback((imageUrl) => {
+    setExistingImages((prev) => prev.filter((url) => url !== imageUrl));
+    setRemovedImages((prev) => [...prev, imageUrl]);
+  }, []);
+
+  // Remove existing video (for editing)
+  const removeExistingVideo = useCallback((videoUrl) => {
+    setExistingVideos((prev) => prev.filter((url) => url !== videoUrl));
+    setRemovedVideos((prev) => [...prev, videoUrl]);
+  }, []);
+
   const handleSubmit = async () => {
     if (!newPost.content.trim() && !newPost.title.trim()) {
       setError("Please add some content or a title to your post.");
@@ -171,7 +199,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
     }
 
     if (!user?.id) {
-      setError("You must be logged in to create a post.");
+      setError("You must be logged in to create/edit a post.");
       return;
     }
 
@@ -186,16 +214,6 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
         .filter((tag) => tag.length > 0) // Remove empty tags
         .map((tag) => tag.toLowerCase()); // Normalize to lowercase
 
-      // Create a clean post data object without circular references
-      const postData = {
-        title: newPost.title.trim(),
-        content: newPost.content.trim(),
-        location: newPost.location.trim(),
-        tags: parsedTags,
-        images: newPost.images, // File objects
-        videos: newPost.videos, // File objects
-      };
-
       // Create a clean user object without potential circular references
       const cleanUser = {
         id: user.id,
@@ -205,7 +223,35 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
         profileImage: user.profileImage,
       };
 
-      const result = await createPost(postData, cleanUser);
+      let result;
+
+      if (isEditing) {
+        // Prepare edit data
+        const editData = {
+          title: newPost.title.trim(),
+          content: newPost.content.trim(),
+          location: newPost.location.trim(),
+          tags: parsedTags,
+          newImages: newPost.images, // New File objects to upload
+          newVideos: newPost.videos, // New File objects to upload
+          removedImages: removedImages, // URLs of removed images
+          removedVideos: removedVideos, // URLs of removed videos
+        };
+
+        result = await editPost(editingPost.id, editData, cleanUser);
+      } else {
+        // Create new post data
+        const postData = {
+          title: newPost.title.trim(),
+          content: newPost.content.trim(),
+          location: newPost.location.trim(),
+          tags: parsedTags,
+          images: newPost.images, // File objects
+          videos: newPost.videos, // File objects
+        };
+
+        result = await createPost(postData, cleanUser);
+      }
 
       if (result.success) {
         // Clean up object URLs
@@ -223,31 +269,27 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
 
         setPreviewUrls({ images: [], videos: [] });
 
-        if (handleCreatePost) {
-          // Create a clean post object for the callback
-          const cleanPost = {
-            id: result.postId,
-            title: result.post.title,
-            content: result.post.content,
-            images: result.post.images,
-            videos: result.post.videos,
-            tags: result.post.tags,
-            likes: result.post.likes,
-            upvotes: result.post.upvotes,
-            downvotes: result.post.downvotes,
-            createdAt: result.post.createdAt,
-            updatedAt: result.post.updatedAt,
-            user: cleanUser,
-          };
-          handleCreatePost(cleanPost);
+        // Reset editing state
+        if (isEditing) {
+          setExistingImages([]);
+          setExistingVideos([]);
+          setRemovedImages([]);
+          setRemovedVideos([]);
         }
 
-        handleCloseCreatePost();
+        // Call appropriate callback
+        if (isEditing && handleEditPost) {
+          handleEditPost(result.post);
+        } else if (!isEditing && handleCreatePost) {
+          handleCreatePost(result.post);
+        }
+
+        handleCloseModal();
       } else {
-        setError(result.error || "Failed to create post. Please try again.");
+        setError(result.error || `Failed to ${isEditing ? "edit" : "create"} post. Please try again.`);
       }
     } catch (error) {
-      console.error("Error creating post:", error);
+      console.error(`Error ${isEditing ? "editing" : "creating"} post:`, error);
       setError("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -264,18 +306,18 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
   }, [cleanupObjectUrls]);
 
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 max-w-2xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+    <div className="fixed inset-0 top-14 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white/95 backdrop-blur-md rounded-2xl shadow-2xl border border-white/20 max-w-3xl w-full max-h-[85vh] overflow-hidden flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-slate-200/50">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-primary/10 rounded-lg">
-              <FileText className="w-5 h-5 text-primary" />
+              {isEditing ? <Edit3 className="w-5 h-5 text-primary" /> : <FileText className="w-5 h-5 text-primary" />}
             </div>
-            <h2 className="text-xl font-semibold text-slate-900">Create Post</h2>
+            <h2 className="text-xl font-semibold text-slate-900">{isEditing ? "Edit Post" : "Create Post"}</h2>
           </div>
           <button
-            onClick={handleCloseCreatePost}
+            onClick={handleCloseModal}
             className="p-2 text-slate-500 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
             disabled={isSubmitting}
           >
@@ -286,7 +328,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
         {/* User Info */}
         <div className="px-6 py-4">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center overflow-hidden">
+            <div className="w-12 h-12 bg-primary rounded-full flex items-center justify-center overflow-hidden">
               {user?.photoURL || user?.profileImage ? (
                 <img
                   src={user.photoURL || user.profileImage}
@@ -299,7 +341,17 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
                 />
               ) : null}
               <span className="text-xl" style={{ display: user?.photoURL || user?.profileImage ? "none" : "block" }}>
-                {user?.profileImage || <User className="w-6 h-6 text-slate-600" />}
+                {user?.profileImage || (
+                  <span className="text-white font-semibold text-lg">
+                    {user?.fullName
+                      ? user.fullName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                      : "U"}
+                  </span>
+                )}
               </span>
             </div>
             <div className="flex-1">
@@ -330,10 +382,10 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
           <div className="mb-4">
             <input
               type="text"
-              placeholder="Ask a question"
+              placeholder={isEditing ? "Update your question" : "Ask a question"}
               value={newPost.title}
               onChange={(e) => setNewPost({ ...newPost, title: e.target.value })}
-              className="w-full text-xl font-medium placeholder-slate-400 bg-white p-2 rounded-lg border-none outline-none resize-none"
+              className="w-full text-xl font-medium placeholder-slate-400 bg-slate-50 p-2 rounded-lg border-none outline-none resize-none"
               disabled={isSubmitting}
               maxLength={200}
             />
@@ -342,11 +394,11 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
           {/* Content Textarea */}
           <div className="mb-4">
             <textarea
-              placeholder="Ask questions/queries for your next Halal Trip..."
+              placeholder={isEditing ? "Update your content..." : "Ask questions/queries for your next Halal Trip..."}
               rows={4}
               value={newPost.content}
               onChange={(e) => setNewPost({ ...newPost, content: e.target.value })}
-              className="w-full text-slate-700 placeholder-slate-400 bg-white p-2 rounded-lg border-none outline-none resize-none"
+              className="w-full text-slate-700 placeholder-slate-400 bg-slate-50 p-2 rounded-lg border-none outline-none resize-none"
               disabled={isSubmitting}
               maxLength={2000}
             />
@@ -363,7 +415,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
                 placeholder="Add tags (separate with commas: travel, islam, halal)"
                 value={newPost.tags}
                 onChange={(e) => setNewPost({ ...newPost, tags: e.target.value })}
-                className="flex-1 bg-white p-2 rounded-lg border-none outline-none text-slate-700 placeholder-slate-400"
+                className="flex-1 bg-slate-50 p-2 rounded-lg border-none outline-none text-slate-700 placeholder-slate-400"
                 disabled={isSubmitting}
                 maxLength={200}
               />
@@ -387,7 +439,9 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
                 <Camera className="w-8 h-8 text-slate-400" />
                 <Video className="w-8 h-8 text-slate-400" />
               </div>
-              <p className="text-slate-600 mb-2">Drag and drop photos or videos, or</p>
+              <p className="text-slate-600 mb-2">
+                {isEditing ? "Add more photos or videos, or" : "Drag and drop photos or videos, or"}
+              </p>
               <div className="flex justify-center space-x-2">
                 <button
                   type="button"
@@ -411,13 +465,59 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
             </div>
           </div>
 
-          {/* Image Preview */}
+          {/* Existing Images (for editing) */}
+          {isEditing && existingImages.length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-2">Current Images ({existingImages.length})</h4>
+              <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                {existingImages.map((imageUrl, index) => (
+                  <div key={`existing-image-${index}`} className="relative group">
+                    <img src={imageUrl} alt={`Existing ${index + 1}`} className="w-full h-32 object-cover rounded-lg" />
+                    <button
+                      type="button"
+                      onClick={() => removeExistingImage(imageUrl)}
+                      disabled={isSubmitting}
+                      className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Existing Videos (for editing) */}
+          {isEditing && existingVideos.length > 0 && (
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-slate-700 mb-2">Current Videos ({existingVideos.length})</h4>
+              <div className="space-y-2 max-h-64 overflow-y-auto">
+                {existingVideos.map((videoUrl, index) => (
+                  <div key={`existing-video-${index}`} className="relative group">
+                    <video src={videoUrl} className="w-full h-32 object-cover rounded-lg" controls />
+                    <button
+                      type="button"
+                      onClick={() => removeExistingVideo(videoUrl)}
+                      disabled={isSubmitting}
+                      className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* New Image Preview */}
           {newPost.images.length > 0 && (
             <div className="mb-4">
-              <h4 className="text-sm font-medium text-slate-700 mb-2">Images ({newPost.images.length})</h4>
+              <h4 className="text-sm font-medium text-slate-700 mb-2">
+                {isEditing ? "New Images" : "Images"} ({newPost.images.length})
+              </h4>
               <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
                 {newPost.images.map((file, index) => (
-                  <div key={`image-${index}-${file.name}`} className="relative group">
+                  <div key={`new-image-${index}-${file.name}`} className="relative group">
                     <img
                       src={previewUrls.images[index]}
                       alt={`Upload ${index + 1}`}
@@ -425,7 +525,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
                     />
                     <button
                       type="button"
-                      onClick={() => removeImage(index)}
+                      onClick={() => removeNewImage(index)}
                       disabled={isSubmitting}
                       className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
                     >
@@ -440,17 +540,19 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
             </div>
           )}
 
-          {/* Video Preview */}
+          {/* New Video Preview */}
           {newPost.videos.length > 0 && (
             <div className="mb-4">
-              <h4 className="text-sm font-medium text-slate-700 mb-2">Videos ({newPost.videos.length})</h4>
+              <h4 className="text-sm font-medium text-slate-700 mb-2">
+                {isEditing ? "New Videos" : "Videos"} ({newPost.videos.length})
+              </h4>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {newPost.videos.map((file, index) => (
-                  <div key={`video-${index}-${file.name}`} className="relative group">
+                  <div key={`new-video-${index}-${file.name}`} className="relative group">
                     <video src={previewUrls.videos[index]} className="w-full h-32 object-cover rounded-lg" controls />
                     <button
                       type="button"
-                      onClick={() => removeVideo(index)}
+                      onClick={() => removeNewVideo(index)}
                       disabled={isSubmitting}
                       className="absolute top-2 right-2 p-1 bg-black/50 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:cursor-not-allowed"
                     >
@@ -471,7 +573,7 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
           <div className="flex justify-end space-x-3">
             <button
               type="button"
-              onClick={handleCloseCreatePost}
+              onClick={handleCloseModal}
               disabled={isSubmitting}
               className="px-6 py-2 text-slate-600 hover:text-slate-800 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -490,12 +592,12 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
               {isSubmitting ? (
                 <>
                   <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                  <span>Posting...</span>
+                  <span>{isEditing ? "Updating..." : "Posting..."}</span>
                 </>
               ) : (
                 <>
-                  <Plus className="w-4 h-4" />
-                  <span>Post</span>
+                  {isEditing ? <Save className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
+                  <span>{isEditing ? "Update Post" : "Post"}</span>
                 </>
               )}
             </button>
@@ -526,4 +628,4 @@ const CreatePostModal = ({ handleCloseCreatePost, handleCreatePost }) => {
   );
 };
 
-export default CreatePostModal;
+export default CreateEditPostModal;

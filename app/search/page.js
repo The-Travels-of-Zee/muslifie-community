@@ -225,7 +225,7 @@ const SearchPage = () => {
                 expandedComments={expandedComments}
                 toggleComments={toggleComments}
                 formatTimeAgo={formatTimeAgo}
-                onPostUpdate={() => {
+                onPostUpdated={() => {
                   console.log("Post updated:", post.id);
                 }}
                 currentUser={currentUser}
