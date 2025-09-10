@@ -124,7 +124,7 @@ const CommentedPosts = () => {
                   expandedComments={expandedComments}
                   toggleComments={toggleComments}
                   formatTimeAgo={formatTimeAgo}
-                  onPostUpdate={() => loadCommentedPosts(true)}
+                  onPostUpdated={() => loadCommentedPosts(true)}
                   currentUser={currentUser}
                   showEditOptions={item.post.user.id === currentUser.id}
                 />

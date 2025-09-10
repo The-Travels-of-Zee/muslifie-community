@@ -303,11 +303,19 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
         {user && (
           <form onSubmit={handleAddComment} className="mb-6">
             <div className="flex space-x-3">
-              <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+              <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {user?.profileImage ? (
                   <img src={user.profileImage} alt={user.fullName} className="w-full h-full object-cover" />
                 ) : (
-                  <User className="w-4 h-4 text-white" />
+                  <span className="text-white font-semibold text-lg">
+                    {user?.fullName
+                      ? user.fullName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                      : "U"}
+                  </span>
                 )}
               </div>
               <div className="flex-1">
@@ -364,7 +372,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                 {/* Comment Header */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
+                    <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center overflow-hidden">
                       {comment.user?.profileImage ? (
                         <img
                           src={comment.user.profileImage}
@@ -372,7 +380,15 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User className="w-5 h-5 text-white" />
+                        <span className="text-white font-semibold text-lg">
+                          {user?.fullName
+                            ? user.fullName
+                                .split(" ")
+                                .map((n) => n[0])
+                                .join("")
+                                .toUpperCase()
+                            : "U"}
+                        </span>
                       )}
                     </div>
                     <div>
@@ -440,11 +456,19 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                 {user && expandedReplies[comment.id] !== null && (
                   <div className="mt-4 ml-12">
                     <div className="flex space-x-3 mb-4">
-                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {user?.profileImage ? (
                           <img src={user.profileImage} alt={user.fullName} className="w-full h-full object-cover" />
                         ) : (
-                          <User className="w-4 h-4 text-white" />
+                          <span className="text-white font-semibold text-lg">
+                            {user?.fullName
+                              ? user.fullName
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .toUpperCase()
+                              : "U"}
+                          </span>
                         )}
                       </div>
                       <div className="flex-1">
@@ -497,7 +521,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                     {expandedReplies[comment.id].map((reply) => (
                       <div key={reply.id} className="flex justify-between items-start bg-gray-50 rounded-lg p-3">
                         <div className="flex space-x-3 flex-1">
-                          <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center overflow-hidden">
+                          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center overflow-hidden">
                             {reply.user?.profileImage ? (
                               <img
                                 src={reply.user.profileImage}
@@ -505,7 +529,15 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                                 className="w-full h-full object-cover"
                               />
                             ) : (
-                              <User className="w-4 h-4 text-white" />
+                              <span className="text-white font-semibold text-lg">
+                                {user?.fullName
+                                  ? user.fullName
+                                      .split(" ")
+                                      .map((n) => n[0])
+                                      .join("")
+                                      .toUpperCase()
+                                  : "U"}
+                              </span>
                             )}
                           </div>
                           <div className="flex-1">

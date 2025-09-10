@@ -216,9 +216,16 @@ const SearchBar = () => {
                       <div className="flex items-center space-x-2 mt-2">
                         <span className="text-xs text-slate-500">by {post.user?.fullName || "Unknown User"}</span>
                         {post.tags && post.tags.length > 0 && (
-                          <div className="flex items-center space-x-1">
+                          <div className="flex items-center flex-wrap gap-1">
                             <span className="text-xs text-slate-400">•</span>
-                            <span className="text-xs text-primary">#{post.tags[0]}</span>
+                            {post.tags.slice(0, 3).map((tag, index) => (
+                              <span key={index} className="text-xs text-primary">
+                                #{tag}
+                              </span>
+                            ))}
+                            {post.tags.length > 3 && (
+                              <span className="text-xs text-slate-400">+{post.tags.length - 3} more</span>
+                            )}
                           </div>
                         )}
                       </div>

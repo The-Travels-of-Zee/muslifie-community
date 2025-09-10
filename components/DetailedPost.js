@@ -16,13 +16,13 @@ function DetailedPost({ slug }) {
   const router = useRouter();
   const { user: currentUser } = useAuthStore();
 
-  const extractPostId = (slug) => slug.split("-").pop();
+  // const extractPostId = (slug) => slug.split("-").pop();
 
   useEffect(() => {
     async function fetchPost() {
       try {
-        const postId = extractPostId(slug);
-        const result = await getPost(postId);
+        // const postId = extractPostId(slug);
+        const result = await getPost(slug);
         if (result.success) {
           setPost(result.post);
           setExpandedComments({ [result.post.id]: true });
@@ -117,7 +117,7 @@ function DetailedPost({ slug }) {
             expandedComments={expandedComments}
             toggleComments={toggleComments}
             formatTimeAgo={formatTimeAgo}
-            onPostUpdate={() => console.log("Post updated:", post.id)}
+            onPostUpdated={() => console.log("Post updated:", post.id)}
             currentUser={currentUser}
           />
         </div>

@@ -143,7 +143,7 @@ const SavedPosts = () => {
                     expandedComments={expandedComments}
                     toggleComments={toggleComments}
                     formatTimeAgo={formatTimeAgo}
-                    onPostUpdate={() => loadSavedPosts(true)}
+                    onPostUpdated={() => loadSavedPosts(true)}
                     currentUser={currentUser}
                     showEditOptions={savedPost.post.user.id === currentUser.id}
                   />

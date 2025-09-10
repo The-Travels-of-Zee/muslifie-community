@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import Navbar from "@/components/Navbar";
 import Sidebar from "@/components/Sidebar";
 import Post from "@/components/Post";
-import CreatePostModal from "@/components/CreatePostModal";
+import CreateEditPostModal from "@/components/CreateEditPostModal";
 import { getPosts } from "@/lib/actions/postActions";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { formatTimeAgo } from "@/lib/utils";
@@ -132,7 +132,7 @@ const Main = () => {
                   expandedComments={expandedComments}
                   toggleComments={toggleComments}
                   formatTimeAgo={formatTimeAgo}
-                  onPostUpdate={() => console.log("Post updated:", post.id)}
+                  onPostUpdated={() => console.log("Post updated:", post.id)}
                   currentUser={currentUser}
                 />
               ))}
@@ -155,8 +155,8 @@ const Main = () => {
       </div>
 
       {showCreatePost && (
-        <CreatePostModal
-          handleCloseCreatePost={() => setShowCreatePost(false)}
+        <CreateEditPostModal
+          handleCloseModal={() => setShowCreatePost(false)}
           handleCreatePost={(newPost) => {
             setShowCreatePost(false);
             loadPosts(true);

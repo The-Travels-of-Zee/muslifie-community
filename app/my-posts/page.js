@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import Post from "@/components/Post";
-import CreatePostModal from "@/components/CreatePostModal";
+import CreateEditPostModal from "@/components/CreateEditPostModal";
 import { getUserPosts } from "@/lib/actions/postActions";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { formatTimeAgo } from "@/lib/utils";
@@ -112,20 +112,33 @@ const MyPosts = () => {
           </div>
 
           {posts.length === 0 ? (
-            <div className="bg-white rounded-lg shadow-sm p-12 text-center">
+            <div className="bg-white rounded-lg shadow p-10 text-center">
               <div className="max-w-sm mx-auto">
-                <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
-                  <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {/* Empty state icon */}
+                <div className="w-16 h-16 mx-auto mb-6 bg-gray-50 rounded-full flex items-center justify-center border border-gray-200">
+                  <svg
+                    className="w-8 h-8 text-gray-400"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                    aria-hidden="true"
+                  >
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
                   </svg>
                 </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No posts yet</h3>
-                <p className="text-gray-500 mb-6">
+
+                {/* Title */}
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">No posts yet</h3>
+
+                {/* Subtitle */}
+                <p className="text-gray-500 mb-6 text-sm leading-relaxed">
                   You haven&apos;t created any posts yet. Share your thoughts with the community!
                 </p>
+
+                {/* CTA button */}
                 <button
                   onClick={() => setShowCreatePost(true)}
-                  className="hidden sm:flex items-center space-x-2 bg-primary text-white px-4 py-2 rounded-lg hover:bg-primary/90 transition-colors"
+                  className="inline-flex items-center justify-center space-x-2 bg-primary text-white px-5 py-2.5 rounded-lg hover:bg-primary/90 transition-colors w-full sm:w-auto"
                 >
                   <Plus className="w-4 h-4" />
                   <span className="font-medium">Create Your First Post</span>
@@ -141,7 +154,7 @@ const MyPosts = () => {
                   expandedComments={expandedComments}
                   toggleComments={toggleComments}
                   formatTimeAgo={formatTimeAgo}
-                  onPostUpdate={() => loadUserPosts(true)}
+                  onPostUpdated={() => loadUserPosts(true)}
                   currentUser={currentUser}
                   showEditOptions={true}
                 />
@@ -165,8 +178,8 @@ const MyPosts = () => {
       </div>
 
       {showCreatePost && (
-        <CreatePostModal
-          handleCloseCreatePost={() => setShowCreatePost(false)}
+        <CreateEditPostModal
+          handleCloseModal={() => setShowCreatePost(false)}
           handleCreatePost={(newPost) => {
             setShowCreatePost(false);
             loadUserPosts(true);

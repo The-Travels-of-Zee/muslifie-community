@@ -135,7 +135,7 @@ const LikedPosts = () => {
                   expandedComments={expandedComments}
                   toggleComments={toggleComments}
                   formatTimeAgo={formatTimeAgo}
-                  onPostUpdate={() => loadLikedPosts(true)}
+                  onPostUpdated={() => loadLikedPosts(true)}
                   currentUser={currentUser}
                   showEditOptions={likedPost.post.user.id === currentUser.id}
                 />

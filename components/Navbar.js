@@ -14,7 +14,7 @@ import {
   MessageCircle,
   Heart,
 } from "lucide-react";
-import CreatePost from "./CreatePostModal";
+import CreateEditPostModal from "./CreateEditPostModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore"; // Adjust path as needed
@@ -153,8 +153,8 @@ const Navbar = () => {
 
       {/* Create Post Modal */}
       {showCreatePost && (
-        <CreatePost
-          handleCloseCreatePost={() => setShowCreatePost(false)}
+        <CreateEditPostModal
+          handleCloseModal={() => setShowCreatePost(false)}
           handleCreatePost={(post) => {
             console.log("New post from navbar:", post);
             setShowCreatePost(false);
