@@ -1,4 +1,4 @@
-import "./globals.css";
+import "./global.css";
 import Script from "next/script";
 import { AuthProvider } from "./provider";
 
