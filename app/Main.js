@@ -88,7 +88,7 @@ const Main = () => {
 
   if (initialLoading) {
     return (
-      <div className="min-h-screen bg-slate-50">
+      <div className="min-h-screen">
         <Navbar />
         <div className="max-w-7xl mx-auto px-2 py-6 flex justify-center items-center">
           <div className="flex flex-col items-center">
@@ -101,7 +101,7 @@ const Main = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen">
       <Navbar />
 
       <div className="max-w-7xl mx-auto px-2 py-6 flex gap-6">
