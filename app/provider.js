@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuthStore } from "@/stores/useAuthStore";
+import { useAuthStore, useInitAuth } from "@/stores/useAuthStore";
 import { usePathname, useRouter } from "next/navigation";
 
 const PUBLIC_ROUTES = new Set(["/", "/search", "/reset-password", "/otp-confirm"]);
@@ -15,14 +15,12 @@ const isPublicPatternRoute = (path) => {
 export function AuthProvider({ children }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { checkAuthStatus, user, isLoading } = useAuthStore();
+  const { user, isLoading } = useAuthStore();
   const [authResolved, setAuthResolved] = useState(false);
   const [initialLoad, setInitialLoad] = useState(true);
 
   // ✅ Run auth check on mount
-  useEffect(() => {
-    checkAuthStatus();
-  }, [checkAuthStatus]);
+  useInitAuth();
 
   // ✅ Handle auth resolution with fallback timer
   useEffect(() => {

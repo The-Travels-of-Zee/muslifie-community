@@ -62,20 +62,15 @@ export default function OtpConfirmPage() {
 
     try {
       otpSchema.parse(formData);
-      const result = await confirmEmailOTP(email, formData.otp, token);
+      const result = await confirmEmailOTP(formData.otp, token);
 
       if (result.success) {
         setIsOtpConfirmed(true);
 
-        // Set user in store if provided
         if (result.user) {
           setUser(result.user);
         }
 
-        // Check auth status to ensure cookies are set
-        await checkAuthStatus();
-
-        // Redirect after a short delay to show success message
         setTimeout(() => {
           router.push("/");
         }, 2000);
@@ -94,11 +89,11 @@ export default function OtpConfirmPage() {
   };
 
   const handleResend = async () => {
-    if (resendCooldown > 0 || !email) return;
+    if (resendCooldown > 0) return;
     setIsResending(true);
     setErrors({});
     try {
-      const result = await resendEmailOTP(email, token);
+      const result = await resendEmailOTP(token);
       if (result.success) {
         setResendCooldown(60);
         // Clear the OTP input

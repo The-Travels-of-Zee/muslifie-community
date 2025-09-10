@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import { getUserStatus, signOut } from "@/lib/actions/authActions";
+import { useEffect } from "react";
 
 export const useAuthStore = create(
   persist(
@@ -99,7 +100,7 @@ export const useAuthStore = create(
 export const useInitAuth = () => {
   const checkAuthStatus = useAuthStore((state) => state.checkAuthStatus);
 
-  if (typeof window !== "undefined") {
+  useEffect(() => {
     checkAuthStatus();
-  }
+  }, []); // Only run once on mount
 };
