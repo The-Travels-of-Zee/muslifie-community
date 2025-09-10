@@ -180,7 +180,7 @@ export default function SignUpUserPage() {
 
             <motion.div variants={itemVariants} className="text-center lg:text-left">
               <h1 className="text-4xl lg:text-5xl font-bold mb-4 leading-tight">
-                Join the community on
+                Join the
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-300 to-indigo-300">
                   Muslifie Community
