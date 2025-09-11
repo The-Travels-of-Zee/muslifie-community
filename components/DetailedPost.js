@@ -6,6 +6,7 @@ import Sidebar from "@/components/Sidebar";
 import Post from "@/components/Post";
 import { getPost } from "@/lib/actions/postActions";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { formatTimeAgo } from "@/lib/utils";
 
 function DetailedPost({ slug }) {
   const [post, setPost] = useState(null);
@@ -38,15 +39,6 @@ function DetailedPost({ slug }) {
 
     if (slug) fetchPost();
   }, [slug]);
-
-  const formatTimeAgo = (dateString) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffInHours = Math.floor((now - date) / (1000 * 60 * 60));
-    if (diffInHours < 1) return "just now";
-    if (diffInHours < 24) return `${diffInHours}h ago`;
-    return `${Math.floor(diffInHours / 24)}d ago`;
-  };
 
   const toggleComments = (postId) => {
     setExpandedComments((prev) => ({

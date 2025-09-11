@@ -17,8 +17,10 @@ import {
   FlagTriangleRight,
   Trash,
   Pencil,
+  UserPlus,
+  UserCheck,
 } from "lucide-react";
-
+import toast from "react-hot-toast";
 import {
   togglePostLike,
   checkUserLike,
@@ -29,7 +31,9 @@ import {
   deletePost,
 } from "@/lib/actions/postActions";
 import { getCommentsCount } from "@/lib/actions/commentActions";
+import { toggleReportPost, checkUserReportedPost } from "@/lib/actions/postActions";
 import { PostActions } from "./PostActions";
+import { followUser, unfollowUser, checkUserFollowing } from "@/lib/actions/userActions";
 import CreateEditPostModal from "./CreateEditPostModal";
 
 const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpdated, currentUser }) => {
@@ -53,6 +57,66 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
 
   const [showModal, setShowModal] = useState(false);
   const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
+
+  // follow-related states
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [isFollowLoading, setIsFollowLoading] = useState(false);
+
+  // report post states ✅
+  const [isPostReported, setIsPostReported] = useState(false);
+  const [isReportLoading, setIsReportLoading] = useState(false);
+
+  const user = post.user || {};
+  const isOwnPost = currentUser?.id === user.id;
+
+  // Follow/Unfollow handler
+  const handleFollow = async () => {
+    if (!currentUser?.id || isFollowLoading || isOwnPost) return;
+
+    setIsFollowLoading(true);
+    try {
+      const result = isFollowing
+        ? await unfollowUser(user.id, currentUser.id)
+        : await followUser(user.id, currentUser.id);
+
+      if (result.success) {
+        setIsFollowing(!isFollowing);
+      } else {
+        console.error("Follow action failed:", result.error);
+      }
+    } catch (error) {
+      console.error("Error in follow action:", error);
+    } finally {
+      setIsFollowLoading(false);
+    }
+  };
+
+  // ✅ Report/Unreport Post Handler
+  const handleReportPost = async () => {
+    if (!currentUser?.id || isOwnPost || isReportLoading) return;
+
+    setIsReportLoading(true);
+    try {
+      const result = await toggleReportPost(post.id, currentUser.id, "inappropriate_content");
+
+      if (result.success) {
+        setIsPostReported(result.isReported);
+
+        if (result.isReported) {
+          toast.success(result.message || "Post reported successfully");
+        } else {
+          toast.success(result.message || "Report removed from post");
+        }
+      } else {
+        toast.error(result.error || "Failed to report/unreport post");
+      }
+    } catch (error) {
+      console.error("Error reporting post:", error);
+      toast.error("Something went wrong while reporting post");
+    } finally {
+      setIsReportLoading(false);
+    }
+  };
 
   // Edit Post Modal state and functions
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -240,6 +304,17 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
     setCurrentMediaIndex((prev) => (prev === 0 ? mediaItems.length - 1 : prev - 1));
   }, [mediaItems.length]);
 
+  const handleUserNavigate = (e) => {
+    e.stopPropagation(); // prevent triggering post navigation
+    if (!user?.id) return;
+
+    if (isOwnPost) {
+      router.push("/my-posts");
+    } else {
+      router.push(`/user/user?query=${user.id}`);
+    }
+  };
+
   // Escape key for modal
   useEffect(() => {
     if (!showModal) return;
@@ -254,24 +329,28 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
 
     const init = async () => {
       try {
-        const [userHasLiked, userVote, userHasSaved, count] = await Promise.all([
+        const [userHasLiked, userVote, userHasSaved, followStatus, count, reportStatus] = await Promise.all([
           checkUserLike(post.id, currentUser.id),
           checkUserVote(post.id, currentUser.id),
           checkUserSave(post.id, currentUser.id),
+          !isOwnPost ? checkUserFollowing(user.id, currentUser.id) : { isFollowing: false },
           getCommentsCount(post.id),
+          checkUserReportedPost(post.id, currentUser.id),
         ]);
 
         setIsLiked(userHasLiked);
         setUserVoteStatus(userVote);
         setIsBookmarked(userHasSaved);
+        setIsFollowing(followStatus.isFollowing);
         setCommentsCount(count);
+        setIsPostReported(reportStatus.isReported);
       } catch (err) {
         console.error("Init error:", err);
       }
     };
 
     init();
-  }, [post.id, currentUser]);
+  }, [post.id, currentUser?.id, isOwnPost, user.id]);
 
   useEffect(() => {
     const initCount = async () => {
@@ -280,8 +359,6 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
     };
     initCount();
   }, [post.id]);
-
-  const user = post.user || {};
 
   return (
     <>
@@ -313,7 +390,8 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
               <div className="flex items-center justify-between space-x-2 mb-4">
                 <div className="relative flex gap-3 items-center">
                   <div
-                    className={`w-14 h-14 flex items-center justify-center rounded-full transition-transform ${
+                    onClick={handleUserNavigate}
+                    className={`w-14 h-14 flex items-center justify-center rounded-full transition-transform cursor-pointer ${
                       engagementLevel === "high"
                         ? "bg-gradient-to-br from-yellow-100 to-orange-100 ring-2 ring-yellow-300"
                         : "bg-gradient-to-br from-slate-100 to-slate-200"
@@ -336,14 +414,44 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
                     </div>
                   </div>
                   <div>
-                    <h3 className="flex gap-2 items-center font-bold text-slate-900">
-                      {user?.fullName || "Unknown User"}
-                      {engagementLevel === "high" && (
-                        <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
-                          <Sparkles className="w-3 h-3 text-white" />
-                        </div>
+                    <div className="flex items-center gap-3">
+                      <h3
+                        onClick={handleUserNavigate}
+                        className="flex gap-2 items-center font-bold text-slate-900 cursor-pointer hover:text-primary"
+                      >
+                        {user?.fullName || "Unknown User"}
+                        {engagementLevel === "high" && (
+                          <div className="w-5 h-5 bg-blue-500 rounded-full flex items-center justify-center">
+                            <Sparkles className="w-3 h-3 text-white" />
+                          </div>
+                        )}
+                      </h3>
+
+                      {/* Follow Button */}
+                      {!isOwnPost && currentUser?.id && (
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleFollow();
+                          }}
+                          disabled={isFollowLoading}
+                          className={`flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                            isFollowing
+                              ? "bg-slate-100 text-slate-700 hover:bg-slate-200"
+                              : "bg-blue-500 text-white hover:bg-blue-600"
+                          }`}
+                        >
+                          {isFollowLoading ? (
+                            <div className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin" />
+                          ) : isFollowing ? (
+                            <UserCheck className="w-3 h-3" />
+                          ) : (
+                            <UserPlus className="w-3 h-3" />
+                          )}
+                          <span>{isFollowing ? "Following" : "Follow"}</span>
+                        </button>
                       )}
-                    </h3>
+                    </div>
                     <div className="flex items-center space-x-1 text-slate-500 text-xs">
                       <Clock className="w-3 h-3" />
                       <time>{formatTimeAgo(post.createdAt)}</time>
@@ -376,7 +484,8 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
                         <Bookmark className={`w-4 h-4 ${isBookmarked ? "text-yellow-600 fill-current" : ""}`} />
                         <span>{isBookmarked ? "Remove Saved" : "Save post"}</span>
                       </button>
-                      {currentUser.id === user.id && (
+
+                      {isOwnPost ? (
                         <>
                           <button
                             className="mt-2 w-full flex items-center space-x-3 px-4 py-2 text-left text-gray-900 hover:bg-red-50 transition-colors"
@@ -401,12 +510,25 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
                             <span>Delete</span>
                           </button>
                         </>
+                      ) : (
+                        <>
+                          <hr className="my-2 border-slate-100" />
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleReportPost();
+                              setShowMoreMenu(false);
+                            }}
+                            disabled={isReportLoading}
+                            className={`w-full flex items-center space-x-3 px-4 py-2 text-left transition-colors ${
+                              isPostReported ? "text-green-600 hover:bg-green-50" : "text-red-800 hover:bg-red-50"
+                            } disabled:opacity-50`}
+                          >
+                            <FlagTriangleRight className="h-4 w-4" />
+                            <span>{isPostReported ? "Unreport Post" : "Report Post"}</span>
+                          </button>
+                        </>
                       )}
-                      <hr className="my-2 border-slate-100" />
-                      <button className="w-full flex items-center space-x-3 px-4 py-2 text-left text-red-800 hover:bg-red-50 transition-colors">
-                        <FlagTriangleRight className="h-4 w-4" />
-                        <span>Report</span>
-                      </button>
                     </div>
                   )}
                 </div>

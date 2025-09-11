@@ -1,6 +1,7 @@
 import "./globals.css";
 import Script from "next/script";
 import { AuthProvider } from "./provider";
+import { Toaster } from "react-hot-toast";
 
 export const metadata = {
   metadataBase: new URL("https://community.muslifie.com/"),
@@ -39,7 +40,7 @@ export default function RootLayout({ children }) {
 
       <body className={"font-notosans antialiased"}>
         <AuthProvider>{children}</AuthProvider>
-        {/* {children} */}
+        <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
 
         {GA_ID && (
           <>
