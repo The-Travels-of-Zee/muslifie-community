@@ -13,29 +13,41 @@ import {
   LogOut,
   MessageCircle,
   Heart,
+  ChevronDown,
 } from "lucide-react";
 import CreateEditPostModal from "./CreateEditPostModal";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useAuthStore } from "@/stores/useAuthStore"; // Adjust path as needed
-import SearchBar from "./SearchBar"; // ✅ import SearchBar
+import { useAuthStore } from "@/stores/useAuthStore";
+import SearchBar from "./SearchBar";
 import NotificationBell from "./NotificationBell";
 
 const Navbar = () => {
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [showSidebar, setShowSidebar] = useState(false);
+  const [showProfileMenu, setShowProfileMenu] = useState(false);
 
   const router = useRouter();
+  const dropdownRef = useRef(null);
 
-  // Get auth state from Zustand store
+  // Close profile dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowProfileMenu(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const { user, isAuthenticated, isLoading, logout } = useAuthStore();
 
-  const links = [
-    { label: "My Posts", icon: FileText, href: "/my-posts" },
-    { label: "Saved Posts", icon: Bookmark, href: "/saved-posts" },
-    { label: "Liked Posts", icon: Heart, href: "/liked-posts" },
-    { label: "My Comments", icon: MessageCircle, href: "/my-comments" },
-    { label: "Settings", icon: Settings, href: "/settings" },
+  const navItems = [
+    { icon: FileText, label: "My Posts", href: "/my-posts", count: user?.postsCount || 0 },
+    { icon: Bookmark, label: "Saved Posts", href: "/saved-posts", count: user?.savedCount || 0 },
+    { icon: Heart, label: "Liked Posts", href: "/liked-posts", count: user?.likesCount || 0 },
+    { icon: MessageCircle, label: "My Comments", href: "/my-comments", count: user?.commentsCount || 0 },
   ];
 
   const handleCreatePostClick = () => {
@@ -50,6 +62,7 @@ const Navbar = () => {
     try {
       await logout();
       setShowSidebar(false);
+      setShowProfileMenu(false);
       router.push("/");
     } catch (error) {
       console.error("Logout error:", error);
@@ -74,26 +87,73 @@ const Navbar = () => {
   );
 
   const renderUserProfile = () => (
-    <div className="hidden sm:flex items-center space-x-3">
-      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center overflow-hidden">
-        {user?.profileImage ? (
-          <img src={user?.profileImage} className="w-10 h-10 rounded-full" alt="user-profile" />
-        ) : (
-          <span className="text-white text-sm font-medium">
-            {user?.fullName
-              ? user.fullName
-                  .split(" ")
-                  .map((n) => n[0])
-                  .join("")
-                  .toUpperCase()
-              : "U"}
-          </span>
-        )}
-      </div>
-      <div className="flex flex-col">
-        <span className="font-medium text-slate-900">{user?.fullName || "User"}</span>
-        <span className="text-sm text-slate-500 w-42 truncate">{user?.email || ""}</span>
-      </div>
+    <div className="hidden sm:flex items-center relative" ref={dropdownRef}>
+      {/* Profile Block */}
+      <button
+        onClick={() => setShowProfileMenu((prev) => !prev)}
+        className="flex items-center space-x-3 focus:outline-none"
+      >
+        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center overflow-hidden">
+          {user?.profileImage ? (
+            <img src={user?.profileImage} className="w-10 h-10 rounded-full" alt="user-profile" />
+          ) : (
+            <span className="text-white text-sm font-medium">
+              {user?.fullName
+                ? user.fullName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                : "U"}
+            </span>
+          )}
+        </div>
+        <div className="flex flex-col text-left">
+          <span className="font-medium text-slate-900">{user?.fullName || "User"}</span>
+          <span className="text-sm text-slate-500 w-42 truncate">{user?.email || ""}</span>
+        </div>
+        <ChevronDown className="w-4 h-4 text-slate-500" />
+      </button>
+
+      {/* Dropdown */}
+      {showProfileMenu && (
+        <div className="absolute right-0 top-14 w-64 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-50">
+          {navItems.map((item, index) => {
+            const Icon = item.icon;
+            return (
+              <Link
+                key={index}
+                href={item.href}
+                onClick={() => setShowProfileMenu(false)}
+                className="flex items-center justify-between px-4 py-2 text-slate-700 hover:bg-slate-100"
+              >
+                <div className="flex items-center space-x-3">
+                  <Icon className="w-5 h-5" />
+                  <span>{item.label}</span>
+                </div>
+                {item.count > 0 && <span className="text-xs bg-slate-200 px-2 py-0.5 rounded-full">{item.count}</span>}
+              </Link>
+            );
+          })}
+
+          <Link
+            href="/settings"
+            onClick={() => setShowProfileMenu(false)}
+            className="flex items-center space-x-3 px-4 py-2 text-slate-700 hover:bg-slate-100"
+          >
+            <Settings className="w-5 h-5" />
+            <span>Settings</span>
+          </Link>
+
+          <button
+            onClick={handleLogout}
+            className="flex items-center space-x-3 w-full px-4 py-2 text-red-600 hover:bg-red-50"
+          >
+            <LogOut className="w-5 h-5" />
+            <span>Logout</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 
@@ -265,7 +325,7 @@ const Navbar = () => {
                     </div>
                   </Link>
 
-                  {links.map((link, index) => {
+                  {navItems.map((link, index) => {
                     const Icon = link.icon;
                     return (
                       <Link

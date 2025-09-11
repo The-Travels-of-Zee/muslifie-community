@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bookmark,
   FileText,
@@ -17,11 +17,35 @@ import {
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { getUserSavedPostsCount } from "@/lib/actions/postActions";
 
 const Sidebar = () => {
   const router = useRouter();
   const { user, isAuthenticated, isLoading, logout } = useAuthStore();
   const [activeLink, setActiveLink] = useState("");
+  const [numberOfSavedPosts, setNumberOfSavedPosts] = useState(0);
+
+  const loadSavedPostsCount = async () => {
+    if (!user?.id) return;
+
+    try {
+      const result = await getUserSavedPostsCount(user.id);
+
+      if (result.error) {
+        console.error("Error loading saved posts count:", result.error);
+      } else {
+        setNumberOfSavedPosts(result.count);
+      }
+    } catch (error) {
+      console.error("Error in loadSavedPostsCount:", error);
+    }
+  };
+
+  useEffect(() => {
+    if (user?.id) {
+      loadSavedPostsCount();
+    }
+  }, [user?.id]);
 
   const handleLogout = async () => {
     try {
@@ -34,7 +58,7 @@ const Sidebar = () => {
 
   const navItems = [
     { icon: FileText, label: "My Posts", href: "/my-posts", count: user?.postsCount || 0 },
-    { icon: Bookmark, label: "Saved Posts", href: "/saved-posts", count: user?.savedCount || 0 },
+    { icon: Bookmark, label: "Saved Posts", href: "/saved-posts", count: numberOfSavedPosts || 0 },
     { icon: Heart, label: "Liked Posts", href: "/liked-posts", count: user?.likesCount || 0 },
     { icon: MessageCircle, label: "My Comments", href: "/my-comments", count: user?.commentsCount || 0 },
   ];

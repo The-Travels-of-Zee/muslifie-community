@@ -340,7 +340,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                     <button
                       type="submit"
                       disabled={!newComment.trim() || submitting}
-                      className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                      className="flex items-center space-x-2 px-4 py-2 bg-secondary/95 text-white rounded-lg hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
                       <Send className="w-4 h-4" />
                       <span>
@@ -496,7 +496,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                             <button
                               onClick={() => handleAddReply(comment.id)}
                               disabled={!replyInputs[comment.id]?.trim()}
-                              className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                              className="px-3 py-2 bg-secondary/95 text-white rounded-lg hover:bg-secondary disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Send className="w-4 h-4" />
                             </button>

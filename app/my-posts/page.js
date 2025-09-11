@@ -4,6 +4,7 @@ import Sidebar from "@/components/Sidebar";
 import Post from "@/components/Post";
 import CreateEditPostModal from "@/components/CreateEditPostModal";
 import { getUserPosts } from "@/lib/actions/postActions";
+import { getFollowersCount, getFollowingCount } from "@/lib/actions/userActions";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { formatTimeAgo } from "@/lib/utils";
 import { Plus } from "lucide-react";
@@ -16,6 +17,9 @@ const MyPosts = () => {
   const [lastPostId, setLastPostId] = useState(null);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [expandedComments, setExpandedComments] = useState({});
+
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   const { user: currentUser } = useAuthStore();
 
@@ -45,8 +49,26 @@ const MyPosts = () => {
     }
   };
 
+  // Load followers/following counts
+  const loadCounts = async () => {
+    if (!currentUser?.id) return;
+    try {
+      const [followersRes, followingRes] = await Promise.all([
+        getFollowersCount(currentUser.id),
+        getFollowingCount(currentUser.id),
+      ]);
+      setFollowersCount(followersRes.count);
+      setFollowingCount(followingRes.count);
+    } catch (err) {
+      console.error("Error fetching counts:", err);
+    }
+  };
+
   useEffect(() => {
-    if (currentUser?.id) loadUserPosts(true);
+    if (currentUser?.id) {
+      loadUserPosts(true);
+      loadCounts();
+    }
   }, [currentUser?.id]);
 
   useEffect(() => {
@@ -73,16 +95,40 @@ const MyPosts = () => {
 
   if (!currentUser) return null;
 
-  if (initialLoading) {
-    return (
-      <div className="min-h-screen bg-slate-50 flex justify-center items-center">
-        <div className="flex flex-col items-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="mt-3 text-gray-600">Loading your posts...</span>
+  // ✅ Profile Header Skeleton
+  const ProfileHeaderSkeleton = () => (
+    <div className="bg-white rounded-lg shadow-sm p-6 flex items-center gap-6 animate-pulse">
+      <div className="w-20 h-20 rounded-full bg-slate-200" />
+      <div className="flex-1 space-y-3">
+        <div className="h-5 w-40 bg-slate-200 rounded" />
+        <div className="flex gap-6 mt-2">
+          <div className="h-4 w-16 bg-slate-200 rounded" />
+          <div className="h-4 w-16 bg-slate-200 rounded" />
+          <div className="h-4 w-16 bg-slate-200 rounded" />
         </div>
       </div>
-    );
-  }
+    </div>
+  );
+
+  // ✅ Post Skeleton
+  const PostSkeleton = () => (
+    <div className="bg-white rounded-lg shadow-sm p-6 animate-pulse space-y-4">
+      <div className="flex items-center gap-4">
+        <div className="w-10 h-10 rounded-full bg-slate-200" />
+        <div className="flex-1 space-y-2">
+          <div className="h-4 w-32 bg-slate-200 rounded" />
+          <div className="h-3 w-24 bg-slate-200 rounded" />
+        </div>
+      </div>
+      <div className="h-4 w-full bg-slate-200 rounded" />
+      <div className="h-4 w-5/6 bg-slate-200 rounded" />
+      <div className="flex gap-6 mt-4">
+        <div className="h-4 w-12 bg-slate-200 rounded" />
+        <div className="h-4 w-12 bg-slate-200 rounded" />
+        <div className="h-4 w-12 bg-slate-200 rounded" />
+      </div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -94,6 +140,41 @@ const MyPosts = () => {
 
         {/* Posts Column */}
         <div className="flex-1 space-y-6">
+          {/* ✅ Profile Header Section */}
+          {initialLoading ? (
+            <ProfileHeaderSkeleton />
+          ) : (
+            <div className="bg-white rounded-lg shadow-sm p-6 flex items-center gap-6">
+              <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-slate-200 flex items-center justify-center">
+                {currentUser?.profileImage ? (
+                  <img
+                    src={currentUser.profileImage}
+                    alt={currentUser.fullName}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-2xl font-bold text-slate-500">
+                    {currentUser?.fullName?.[0]?.toUpperCase() || "U"}
+                  </span>
+                )}
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-slate-900">{currentUser?.fullName || "Unknown User"}</h2>
+                <div className="flex gap-6 mt-2 text-slate-600 text-sm">
+                  <span>
+                    <strong>{followersCount}</strong> Followers
+                  </span>
+                  <span>
+                    <strong>{followingCount}</strong> Following
+                  </span>
+                  <span>
+                    <strong>{posts.length}</strong> Posts
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Page Header */}
           <div className="bg-white rounded-lg shadow-sm p-6 flex items-center justify-between">
             <div>
@@ -111,7 +192,14 @@ const MyPosts = () => {
             </button>
           </div>
 
-          {posts.length === 0 ? (
+          {/* ✅ Initial Loading (show skeletons instead of spinner) */}
+          {initialLoading ? (
+            <>
+              <PostSkeleton />
+              <PostSkeleton />
+              <PostSkeleton />
+            </>
+          ) : posts.length === 0 ? (
             <div className="bg-white rounded-lg shadow p-10 text-center">
               <div className="max-w-sm mx-auto">
                 {/* Empty state icon */}
@@ -160,11 +248,12 @@ const MyPosts = () => {
                 />
               ))}
 
+              {/* ✅ Show skeletons when loading more posts */}
               {loading && (
-                <div className="flex justify-center items-center py-8">
-                  <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
-                  <span className="ml-3 text-gray-600">Loading more posts...</span>
-                </div>
+                <>
+                  <PostSkeleton />
+                  <PostSkeleton />
+                </>
               )}
 
               {!hasMore && posts.length > 0 && (
@@ -180,7 +269,7 @@ const MyPosts = () => {
       {showCreatePost && (
         <CreateEditPostModal
           handleCloseModal={() => setShowCreatePost(false)}
-          handleCreatePost={(newPost) => {
+          handleCreatePost={() => {
             setShowCreatePost(false);
             loadUserPosts(true);
           }}
