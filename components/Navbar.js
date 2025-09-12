@@ -48,6 +48,7 @@ const Navbar = () => {
     { icon: Bookmark, label: "Saved Posts", href: "/saved-posts", count: user?.savedCount || 0 },
     { icon: Heart, label: "Liked Posts", href: "/liked-posts", count: user?.likesCount || 0 },
     { icon: MessageCircle, label: "My Comments", href: "/my-comments", count: user?.commentsCount || 0 },
+    { icon: Settings, label: "Settings", href: "/settings" },
   ];
 
   const handleCreatePostClick = () => {
