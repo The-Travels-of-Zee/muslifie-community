@@ -137,15 +137,6 @@ const Navbar = () => {
             );
           })}
 
-          <Link
-            href="/settings"
-            onClick={() => setShowProfileMenu(false)}
-            className="flex items-center space-x-3 px-4 py-2 text-slate-700 hover:bg-slate-100"
-          >
-            <Settings className="w-5 h-5" />
-            <span>Settings</span>
-          </Link>
-
           <button
             onClick={handleLogout}
             className="flex items-center space-x-3 w-full px-4 py-2 text-red-600 hover:bg-red-50"
