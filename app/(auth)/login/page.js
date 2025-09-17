@@ -167,7 +167,7 @@ export default function LogInPage() {
           className="bg-gradient-to-br from-primary via-primary to-(--secondary-dark) p-8 lg:p-12 flex flex-col justify-center text-white relative overflow-hidden"
         >
           {/* Back Button */}
-          <Link href="/" className="absolute top-8 left-8 p-2 hover:bg-white/20 rounded-full transition-colors z-10">
+          <Link href="/" className="absolute top-4 left-4 p-2 hover:bg-white/20 rounded-full transition-colors z-10">
             <ArrowLeft className="w-6 h-6" />
           </Link>
 
@@ -204,7 +204,7 @@ export default function LogInPage() {
             {/* Logo */}
             <motion.div
               variants={itemVariants}
-              className="w-20 h-20 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mb-8 mx-auto lg:mx-0"
+              className="w-20 h-20 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center my-6 mx-auto lg:mx-0"
             >
               <img src="/favicon/logo.png" width={48} height={48} alt="muslifie-logo" className="inline" />
             </motion.div>
@@ -381,17 +381,17 @@ export default function LogInPage() {
               </motion.button>
 
               {/* Divider */}
-              <div className="relative my-8">
+              {/* <div className="relative my-8">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-muted" />
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-4 bg-white text-dark/60 font-notosans-light">or continue with</span>
                 </div>
-              </div>
+              </div> */}
 
               {/* Google Sign In */}
-              <motion.button
+              {/* <motion.button
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading || isGoogleLoading}
@@ -427,7 +427,7 @@ export default function LogInPage() {
                     <span className="font-notosans-light">Sign in with Google</span>
                   </>
                 )}
-              </motion.button>
+              </motion.button> */}
 
               {/* Sign Up Link */}
               <motion.div variants={itemVariants} className="text-center mt-8">
