@@ -182,13 +182,13 @@ const Sidebar = () => {
           </div>
           <div className="flex flex-col space-y-4 items-center">
             <Link href="https://apps.apple.com/pk/app/muslifie/id6749224199" target="_blank">
-              <img src="/stores/app-store.svg" alt="App Store" className="h-12" />
+              <img src="/stores/app-store.svg" alt="App Store" className="rounded-sm h-12 w-44 object-cover" />
             </Link>
             <Link
               href="https://play.google.com/store/apps/details?id=com.app.muslifie&pcampaignid=web_share"
               target="_blank"
             >
-              <img src="/stores/google-play.svg" alt="Google Play" className="h-12" />
+              <img src="/stores/google-play.svg" alt="Google Play" className="rounded-sm h-12 w-44 object-cover" />
             </Link>
           </div>
         </div>

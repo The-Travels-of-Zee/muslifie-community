@@ -158,7 +158,7 @@ export default function SignUpUserPage() {
           variants={itemVariants}
           className="bg-gradient-to-br from-primary via-primary to-secondary p-8 lg:p-12 flex flex-col justify-center text-white relative overflow-hidden"
         >
-          <Link href="/" className="absolute top-8 left-8 p-2 hover:bg-white/20 rounded-full transition-colors z-10">
+          <Link href="/" className="absolute top-4 left-4 p-2 hover:bg-white/20 rounded-full transition-colors z-10">
             <ArrowLeft className="w-6 h-6" />
           </Link>
 
@@ -173,7 +173,7 @@ export default function SignUpUserPage() {
           <div className="relative z-10">
             <motion.div
               variants={itemVariants}
-              className="w-20 h-20 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center mb-8 mx-auto lg:mx-0"
+              className="w-20 h-20 bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl flex items-center justify-center my-6 mx-auto lg:mx-0"
             >
               <img src="/favicon/logo.png" width={48} height={48} alt="muslifie-logo" />
             </motion.div>
@@ -324,7 +324,8 @@ export default function SignUpUserPage() {
                 )}
               </motion.button>
 
-              {/* Divider */}
+              {/* Divider (hidden since Google button is removed) */}
+              {/*
               <div className="relative my-8">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-200" />
@@ -334,7 +335,6 @@ export default function SignUpUserPage() {
                 </div>
               </div>
 
-              {/* Google Sign Up */}
               <motion.button
                 type="button"
                 onClick={handleGoogleSignUp}
@@ -372,6 +372,7 @@ export default function SignUpUserPage() {
                   </>
                 )}
               </motion.button>
+              */}
 
               {/* Already have account */}
               <motion.div variants={itemVariants} className="text-center mt-8">
