@@ -23,6 +23,7 @@ import { useAuthStore } from "@/stores/useAuthStore";
 const UserProfile = () => {
   const searchParams = useSearchParams();
   const userId = searchParams.get("query");
+  const userEmail = searchParams.get("email");
 
   const { user: currentUser } = useAuthStore();
 
@@ -267,10 +268,37 @@ const UserProfile = () => {
               <div className="flex items-center gap-6">
                 <div className="w-20 h-20 rounded-full overflow-hidden border-2 border-white flex items-center justify-center">
                   {user?.profileImage ? (
-                    <img src={user.profileImage} alt={user.fullName} className="w-full h-full object-cover" />
+                    <img
+                      src={user.profileImage}
+                      alt={user?.fullName || "user"}
+                      className="w-20 h-20 rounded-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.style.display = "none"; // hide broken img
+                        e.currentTarget.insertAdjacentHTML(
+                          "afterend",
+                          `<span class="text-white font-semibold text-lg">
+                                ${
+                                  user?.fullName
+                                    ? user.fullName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase()
+                                    : "U"
+                                }
+                              </span>`
+                        );
+                      }}
+                    />
                   ) : (
-                    <span className="text-2xl font-bold text-slate-500">
-                      {user?.fullName?.[0]?.toUpperCase() || "U"}
+                    <span className="text-white font-semibold text-lg">
+                      {user?.fullName
+                        ? user.fullName
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()
+                        : "U"}
                     </span>
                   )}
                 </div>

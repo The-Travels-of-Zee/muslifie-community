@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signUpUserWithEmail, signInWithGoogle } from "@/lib/actions/authActions";
 import { useAuthStore } from "@/stores/useAuthStore";
+import { signInWithPopup } from 'firebase/auth';
+import { auth, googleProvider } from '@/lib/firebase/config';
 
 // Zod validation schema
 const signUpSchema = z.object({
@@ -82,19 +84,46 @@ export default function SignUpUserPage() {
     }
   };
 
+  // Updated Google Sign Up function
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true);
     setErrors({});
+    
     try {
-      const result = await signInWithGoogle();
-      if (!result.success) {
-        setErrors({ submit: result.error || "Google sign-in failed" });
-      } else if (result.user) {
-        setUser(result.user);
-        router.push("/");
+      // Firebase Google sign-in
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+      
+      // Get ID token
+      const idToken = await user.getIdToken();
+      
+      // Call your server action with traveler as default userType for web
+      const authResult = await signInWithGoogle(idToken, 'traveler');
+      
+      if (authResult.success) {
+        if (authResult.user) {
+          setUser(authResult.user);
+          router.push("/");
+        }
+      } else {
+        // Handle different error types
+        if (authResult.existingUserType && authResult.requestedUserType) {
+          setErrors({ 
+            submit: `Account exists as ${authResult.existingUserType}. Please sign in as ${authResult.existingUserType} instead.` 
+          });
+        } else {
+          setErrors({ submit: authResult.error || "Google sign-up failed" });
+        }
       }
     } catch (error) {
-      setErrors({ submit: error.message || "Google sign-in failed" });
+      console.error('Google sign-up error:', error);
+      if (error.code === 'auth/popup-closed-by-user') {
+        setErrors({ submit: 'Sign-up cancelled' });
+      } else if (error.code === 'auth/popup-blocked') {
+        setErrors({ submit: 'Popup blocked. Please allow popups for this site.' });
+      } else {
+        setErrors({ submit: error.message || 'Google sign-up failed' });
+      }
     } finally {
       setIsGoogleLoading(false);
     }
@@ -324,8 +353,7 @@ export default function SignUpUserPage() {
                 )}
               </motion.button>
 
-              {/* Divider (hidden since Google button is removed) */}
-              {/*
+              {/* Divider */}
               <div className="relative my-8">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-gray-200" />
@@ -335,6 +363,7 @@ export default function SignUpUserPage() {
                 </div>
               </div>
 
+              {/* Google Sign Up */}
               <motion.button
                 type="button"
                 onClick={handleGoogleSignUp}
@@ -372,7 +401,6 @@ export default function SignUpUserPage() {
                   </>
                 )}
               </motion.button>
-              */}
 
               {/* Already have account */}
               <motion.div variants={itemVariants} className="text-center mt-8">

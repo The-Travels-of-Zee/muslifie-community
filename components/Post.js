@@ -311,7 +311,7 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
     if (isOwnPost) {
       router.push("/my-posts");
     } else {
-      router.push(`/user/user?query=${user.id}`);
+      router.push(`/user/user?query=${user.id}&email=${user.email}`);
     }
   };
 
@@ -399,7 +399,28 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
                   >
                     <div className="w-12 h-12 rounded-full overflow-hidden flex items-center justify-center bg-gradient-to-br from-primary to-primary/80">
                       {user?.profileImage ? (
-                        <img src={user.profileImage} alt="user" className="w-full h-full object-cover" />
+                        <img
+                          src={user.profileImage}
+                          alt={user?.fullName || "user"}
+                          className="w-12 h-12 rounded-full object-cover"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none"; // hide broken img
+                            e.currentTarget.insertAdjacentHTML(
+                              "afterend",
+                              `<span class="text-white font-semibold text-lg">
+                                ${
+                                  user?.fullName
+                                    ? user.fullName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase()
+                                    : "U"
+                                }
+                              </span>`
+                            );
+                          }}
+                        />
                       ) : (
                         <span className="text-white font-semibold text-lg">
                           {user?.fullName

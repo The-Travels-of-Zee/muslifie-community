@@ -13,6 +13,7 @@ import {
 } from "@/lib/actions/commentActions";
 import { User, Reply, Send, MoreHorizontal, Edit3, Trash2 } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
+import Link from "next/link";
 
 const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
   const [comments, setComments] = useState([]);
@@ -305,7 +306,28 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
             <div className="flex space-x-3">
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                 {user?.profileImage ? (
-                  <img src={user.profileImage} alt={user.fullName} className="w-full h-full object-cover" />
+                  <img
+                    src={user.profileImage}
+                    alt={user?.fullName || "user"}
+                    className="w-8 h-8 rounded-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none"; // hide broken img
+                      e.currentTarget.insertAdjacentHTML(
+                        "afterend",
+                        `<span class="text-white font-semibold text-lg">
+                                ${
+                                  user?.fullName
+                                    ? user.fullName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase()
+                                    : "U"
+                                }
+                              </span>`
+                      );
+                    }}
+                  />
                 ) : (
                   <span className="text-white font-semibold text-lg">
                     {user?.fullName
@@ -372,30 +394,51 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                 {/* Comment Header */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center overflow-hidden">
-                      {comment.user?.profileImage ? (
-                        <img
-                          src={comment.user.profileImage}
-                          alt={comment.user.fullName}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-white font-semibold text-lg">
-                          {user?.fullName
-                            ? user.fullName
-                                .split(" ")
-                                .map((n) => n[0])
-                                .join("")
-                                .toUpperCase()
-                            : "U"}
-                        </span>
-                      )}
-                    </div>
+                    <Link href={`/user/user?query=${comment.user?.id}`}>
+                      <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center overflow-hidden">
+                        {comment.user?.profileImage ? (
+                          <img
+                            src={comment.user.profileImage}
+                            alt={comment.user?.fullName || "user"}
+                            className="w-10 h-10 rounded-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none"; // hide broken img
+                              e.currentTarget.insertAdjacentHTML(
+                                "afterend",
+                                `<span class="text-white font-semibold text-lg">
+                                ${
+                                  comment.user?.fullName
+                                    ? comment.user.fullName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase()
+                                    : "U"
+                                }
+                              </span>`
+                              );
+                            }}
+                          />
+                        ) : (
+                          <span className="text-white font-semibold text-lg">
+                            {comment.user?.fullName
+                              ? comment.user.fullName
+                                  .split(" ")
+                                  .map((n) => n[0])
+                                  .join("")
+                                  .toUpperCase()
+                              : "U"}
+                          </span>
+                        )}
+                      </div>
+                    </Link>
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className="font-semibold text-gray-900 text-sm sm:text-base">
-                          {comment.user?.fullName || "Anonymous"}
-                        </span>
+                        <Link href={`/user/user?query=${comment.user?.id}`}>
+                          <span className="font-semibold text-gray-900 text-sm sm:text-base">
+                            {comment.user?.fullName || "Anonymous"}
+                          </span>
+                        </Link>
                         <span className="text-xs text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
                         {comment.isEdited && <span className="text-xs text-gray-400">(edited)</span>}
                       </div>
@@ -458,7 +501,28 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                     <div className="flex space-x-3 mb-4">
                       <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden">
                         {user?.profileImage ? (
-                          <img src={user.profileImage} alt={user.fullName} className="w-full h-full object-cover" />
+                          <img
+                            src={user.profileImage}
+                            alt={user?.fullName || "user"}
+                            className="w-8 h-8 rounded-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = "none"; // hide broken img
+                              e.currentTarget.insertAdjacentHTML(
+                                "afterend",
+                                `<span class="text-white font-semibold text-lg">
+                                ${
+                                  user?.fullName
+                                    ? user.fullName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase()
+                                    : "U"
+                                }
+                              </span>`
+                              );
+                            }}
+                          />
                         ) : (
                           <span className="text-white font-semibold text-lg">
                             {user?.fullName
@@ -521,30 +585,51 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                     {expandedReplies[comment.id].map((reply) => (
                       <div key={reply.id} className="flex justify-between items-start bg-gray-50 rounded-lg p-3">
                         <div className="flex space-x-3 flex-1">
-                          <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center overflow-hidden">
-                            {reply.user?.profileImage ? (
-                              <img
-                                src={reply.user.profileImage}
-                                alt={reply.user.fullName}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span className="text-white font-semibold text-lg">
-                                {user?.fullName
-                                  ? user.fullName
-                                      .split(" ")
-                                      .map((n) => n[0])
-                                      .join("")
-                                      .toUpperCase()
-                                  : "U"}
-                              </span>
-                            )}
-                          </div>
+                          <Link href={`/user/user?query=${reply.user?.id}`}>
+                            <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center overflow-hidden">
+                              {reply.user?.profileImage ? (
+                                <img
+                                  src={reply.user.profileImage}
+                                  alt={reply.user?.fullName || "user"}
+                                  className="w-8 h-8 rounded-full object-cover"
+                                  onError={(e) => {
+                                    e.currentTarget.style.display = "none"; // hide broken img
+                                    e.currentTarget.insertAdjacentHTML(
+                                      "afterend",
+                                      `<span class="text-white font-semibold text-lg">
+                                ${
+                                  reply.user?.fullName
+                                    ? reply.user.fullName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase()
+                                    : "U"
+                                }
+                              </span>`
+                                    );
+                                  }}
+                                />
+                              ) : (
+                                <span className="text-white font-semibold text-lg">
+                                  {reply.user?.fullName
+                                    ? reply.user.fullName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase()
+                                    : "U"}
+                                </span>
+                              )}
+                            </div>
+                          </Link>
                           <div className="flex-1">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <span className="font-medium text-gray-900 text-sm">
-                                {reply.user?.fullName || "Anonymous"}
-                              </span>
+                              <Link href={`/user/user?query=${reply.user?.id}`}>
+                                <span className="font-medium text-gray-900 text-sm">
+                                  {reply.user?.fullName || "Anonymous"}
+                                </span>
+                              </Link>
                               <span className="text-xs text-gray-500">{formatTimeAgo(reply.createdAt)}</span>
                               {reply.isEdited && <span className="text-xs text-gray-400">(edited)</span>}
                             </div>

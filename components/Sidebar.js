@@ -99,7 +99,28 @@ const Sidebar = () => {
           <div className="flex items-center space-x-4 mb-4">
             <div className="w-14 h-14 bg-gradient-to-br from-primary to-primary/80 rounded-full flex items-center justify-center relative">
               {user?.profileImage ? (
-                <img src={user.profileImage} alt="user" className="w-14 h-14 rounded-full object-cover" />
+                <img
+                  src={user.profileImage}
+                  alt={user?.fullName || "user"}
+                  className="w-14 h-14 rounded-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none"; // hide broken img
+                    e.currentTarget.insertAdjacentHTML(
+                      "afterend",
+                      `<span class="text-white font-semibold text-lg">
+          ${
+            user?.fullName
+              ? user.fullName
+                  .split(" ")
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase()
+              : "U"
+          }
+        </span>`
+                    );
+                  }}
+                />
               ) : (
                 <span className="text-white font-semibold text-lg">
                   {user?.fullName
@@ -111,6 +132,7 @@ const Sidebar = () => {
                     : "U"}
                 </span>
               )}
+
               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
             </div>
             <div className="flex-1">
