@@ -96,9 +96,30 @@ const Navbar = () => {
       >
         <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center overflow-hidden">
           {user?.profileImage ? (
-            <img src={user?.profileImage} className="w-10 h-10 rounded-full" alt="user-profile" />
+            <img
+              src={user.profileImage}
+              alt={user?.fullName || "user"}
+              className="w-10 h-10 rounded-full object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none"; // hide broken img
+                e.currentTarget.insertAdjacentHTML(
+                  "afterend",
+                  `<span class="text-white font-semibold text-lg">
+                                ${
+                                  user?.fullName
+                                    ? user.fullName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase()
+                                    : "U"
+                                }
+                              </span>`
+                );
+              }}
+            />
           ) : (
-            <span className="text-white text-sm font-medium">
+            <span className="text-white font-semibold text-lg">
               {user?.fullName
                 ? user.fullName
                     .split(" ")

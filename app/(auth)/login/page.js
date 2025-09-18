@@ -8,6 +8,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { signInWithEmail, signInWithGoogle } from "@/lib/actions/authActions";
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider } from "@/lib/firebase/config";
 
 // Zod validation schema
 const logInSchema = z.object({
@@ -82,20 +84,47 @@ export default function LogInPage() {
     }
   };
 
+  // Updated Google Sign In function
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     setErrors({});
+
     try {
-      const result = await signInWithGoogle();
-      if (!result.success) {
-        setErrors({ submit: result.error || "Google sign-in failed" });
-      } else if (result.user) {
-        setUser(result.user);
-        await checkAuthStatus();
-        router.push("/");
+      // Firebase Google sign-in
+      const result = await signInWithPopup(auth, googleProvider);
+      const user = result.user;
+
+      // Get ID token
+      const idToken = await user.getIdToken();
+
+      // Call your server action with traveler as default userType for web
+      const authResult = await signInWithGoogle(idToken, "traveler");
+
+      if (authResult.success) {
+        if (authResult.user) {
+          setUser(authResult.user);
+          await checkAuthStatus();
+          router.push("/");
+        }
+      } else {
+        // Handle different error types
+        if (authResult.existingUserType && authResult.requestedUserType) {
+          setErrors({
+            submit: `Account exists as ${authResult.existingUserType}. Please sign in as ${authResult.existingUserType} instead.`,
+          });
+        } else {
+          setErrors({ submit: authResult.error || "Google sign-in failed" });
+        }
       }
     } catch (error) {
-      setErrors({ submit: error.message || "Google sign-in failed" });
+      console.error("Google sign-in error:", error);
+      if (error.code === "auth/popup-closed-by-user") {
+        setErrors({ submit: "Sign-in cancelled" });
+      } else if (error.code === "auth/popup-blocked") {
+        setErrors({ submit: "Popup blocked. Please allow popups for this site." });
+      } else {
+        setErrors({ submit: error.message || "Google sign-in failed" });
+      }
     } finally {
       setIsGoogleLoading(false);
     }
@@ -381,17 +410,17 @@ export default function LogInPage() {
               </motion.button>
 
               {/* Divider */}
-              {/* <div className="relative my-8">
+              <div className="relative my-8">
                 <div className="absolute inset-0 flex items-center">
                   <div className="w-full border-t border-muted" />
                 </div>
                 <div className="relative flex justify-center text-sm">
                   <span className="px-4 bg-white text-dark/60 font-notosans-light">or continue with</span>
                 </div>
-              </div> */}
+              </div>
 
               {/* Google Sign In */}
-              {/* <motion.button
+              <motion.button
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={isLoading || isGoogleLoading}
@@ -427,7 +456,7 @@ export default function LogInPage() {
                     <span className="font-notosans-light">Sign in with Google</span>
                   </>
                 )}
-              </motion.button> */}
+              </motion.button>
 
               {/* Sign Up Link */}
               <motion.div variants={itemVariants} className="text-center mt-8">
