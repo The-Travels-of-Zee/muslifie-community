@@ -157,7 +157,7 @@ export default function LogInPage() {
         if (authResult.user) {
           setUser(authResult.user);
           await checkAuthStatus();
-
+          
           router.push("/");
         }
       } else {

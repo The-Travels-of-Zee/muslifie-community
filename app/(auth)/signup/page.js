@@ -155,7 +155,6 @@ export default function SignUpUserPage() {
       if (authResult.success) {
         if (authResult.user) {
           setUser(authResult.user);
-          await checkAuthStatus();
 
           router.push("/");
         }
