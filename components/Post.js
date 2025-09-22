@@ -305,13 +305,13 @@ const Post = ({ post, expandedComments, toggleComments, formatTimeAgo, onPostUpd
   }, [mediaItems.length]);
 
   const handleUserNavigate = (e) => {
-    e.stopPropagation(); // prevent triggering post navigation
+    e.stopPropagation();
     if (!user?.id) return;
 
     if (isOwnPost) {
       router.push("/my-posts");
     } else {
-      router.push(`/user/user?query=${user.id}&email=${user.email}`);
+      router.push(`/user/user?query=${user.id}`);
     }
   };
 

@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import Post from "@/components/Post";
 import CreateEditPostModal from "@/components/CreateEditPostModal";
+import FollowersFollowingModal from "@/components/FollowersFollowingModal";
 import { getUserPosts } from "@/lib/actions/postActions";
 import {
   checkIfUserReported,
@@ -41,6 +42,12 @@ const UserProfile = () => {
 
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [followersModalTab, setFollowersModalTab] = useState("followers");
+
+  const handleCountUpdate = () => {
+    loadCounts(); // Refresh the counts
+  };
 
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
@@ -276,7 +283,7 @@ const UserProfile = () => {
                         e.currentTarget.style.display = "none"; // hide broken img
                         e.currentTarget.insertAdjacentHTML(
                           "afterend",
-                          `<span class="text-white font-semibold text-lg">
+                          `<span class="text-gray-600 font-semibold text-lg">
                                 ${
                                   user?.fullName
                                     ? user.fullName
@@ -291,7 +298,7 @@ const UserProfile = () => {
                       }}
                     />
                   ) : (
-                    <span className="text-white font-semibold text-lg">
+                    <span className="text-gray-600 font-semibold text-lg">
                       {user?.fullName
                         ? user.fullName
                             .split(" ")
@@ -305,16 +312,38 @@ const UserProfile = () => {
                 <div>
                   <h2 className="text-xl font-bold text-slate-900">{user?.fullName || "Unknown User"}</h2>
                   <div className="flex gap-6 mt-2 text-slate-600 text-sm">
-                    <span>
+                    <button
+                      onClick={() => {
+                        setFollowersModalTab("followers");
+                        setShowFollowersModal(true);
+                      }}
+                      className="hover:text-slate-900 transition"
+                    >
                       <strong>{followersCount}</strong> Followers
-                    </span>
-                    <span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setFollowersModalTab("following");
+                        setShowFollowersModal(true);
+                      }}
+                      className="hover:text-slate-900 transition"
+                    >
                       <strong>{followingCount}</strong> Following
-                    </span>
+                    </button>
                     <span>
                       <strong>{posts.length}</strong> Posts
                     </span>
                   </div>
+
+                  {showFollowersModal && (
+                    <FollowersFollowingModal
+                      isOpen={showFollowersModal}
+                      onClose={() => setShowFollowersModal(false)}
+                      userId={userId}
+                      initialTab={followersModalTab}
+                      onCountUpdate={handleCountUpdate}
+                    />
+                  )}
                 </div>
               </div>
 

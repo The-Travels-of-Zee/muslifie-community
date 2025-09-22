@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "@/components/Sidebar";
 import Post from "@/components/Post";
 import CreateEditPostModal from "@/components/CreateEditPostModal";
+import FollowersFollowingModal from "@/components/FollowersFollowingModal";
 import { getUserPosts } from "@/lib/actions/postActions";
 import { getFollowersCount, getFollowingCount } from "@/lib/actions/userActions";
 import { useAuthStore } from "@/stores/useAuthStore";
@@ -20,6 +21,12 @@ const MyPosts = () => {
 
   const [followersCount, setFollowersCount] = useState(0);
   const [followingCount, setFollowingCount] = useState(0);
+  const [showFollowersModal, setShowFollowersModal] = useState(false);
+  const [followersModalTab, setFollowersModalTab] = useState("followers");
+
+  const handleCountUpdate = () => {
+    loadCounts(); // Refresh the counts
+  };
 
   const { user: currentUser } = useAuthStore();
 
@@ -149,28 +156,73 @@ const MyPosts = () => {
                 {currentUser?.profileImage ? (
                   <img
                     src={currentUser.profileImage}
-                    alt={currentUser.fullName}
-                    className="w-full h-full object-cover"
+                    alt={currentUser?.fullName || "user"}
+                    className="w-20 h-20 rounded-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.style.display = "none"; // hide broken img
+                      e.currentTarget.insertAdjacentHTML(
+                        "afterend",
+                        `<span class="text-gray-600 font-semibold text-lg">
+                                ${
+                                  currentUser?.fullName
+                                    ? currentUser.fullName
+                                        .split(" ")
+                                        .map((n) => n[0])
+                                        .join("")
+                                        .toUpperCase()
+                                    : "U"
+                                }
+                              </span>`
+                      );
+                    }}
                   />
                 ) : (
-                  <span className="text-2xl font-bold text-slate-500">
-                    {currentUser?.fullName?.[0]?.toUpperCase() || "U"}
+                  <span className="text-gray-600 font-semibold text-lg">
+                    {currentUser?.fullName
+                      ? currentUser.fullName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                      : "U"}
                   </span>
                 )}
               </div>
               <div>
                 <h2 className="text-xl font-bold text-slate-900">{currentUser?.fullName || "Unknown User"}</h2>
                 <div className="flex gap-6 mt-2 text-slate-600 text-sm">
-                  <span>
+                  <button
+                    onClick={() => {
+                      setFollowersModalTab("followers");
+                      setShowFollowersModal(true);
+                    }}
+                    className="hover:text-slate-900 transition"
+                  >
                     <strong>{followersCount}</strong> Followers
-                  </span>
-                  <span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFollowersModalTab("following");
+                      setShowFollowersModal(true);
+                    }}
+                    className="hover:text-slate-900 transition"
+                  >
                     <strong>{followingCount}</strong> Following
-                  </span>
+                  </button>
                   <span>
                     <strong>{posts.length}</strong> Posts
                   </span>
                 </div>
+
+                {showFollowersModal && (
+                  <FollowersFollowingModal
+                    isOpen={showFollowersModal}
+                    onClose={() => setShowFollowersModal(false)}
+                    userId={currentUser.id}
+                    initialTab={followersModalTab}
+                    onCountUpdate={handleCountUpdate}
+                  />
+                )}
               </div>
             </div>
           )}

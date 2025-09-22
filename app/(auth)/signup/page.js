@@ -8,8 +8,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { signUpUserWithEmail, signInWithGoogle } from "@/lib/actions/authActions";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '@/lib/firebase/config';
+import { signInWithPopup } from "firebase/auth";
+import { auth, googleProvider, appleProvider } from "@/lib/firebase/config";
+import { FaApple } from "react-icons/fa";
 
 // Zod validation schema
 const signUpSchema = z.object({
@@ -31,6 +32,7 @@ export default function SignUpUserPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -88,18 +90,18 @@ export default function SignUpUserPage() {
   const handleGoogleSignUp = async () => {
     setIsGoogleLoading(true);
     setErrors({});
-    
+
     try {
       // Firebase Google sign-in
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
-      
+
       // Get ID token
       const idToken = await user.getIdToken();
-      
+
       // Call your server action with traveler as default userType for web
-      const authResult = await signInWithGoogle(idToken, 'traveler');
-      
+      const authResult = await signInWithGoogle(idToken, "traveler");
+
       if (authResult.success) {
         if (authResult.user) {
           setUser(authResult.user);
@@ -108,27 +110,38 @@ export default function SignUpUserPage() {
       } else {
         // Handle different error types
         if (authResult.existingUserType && authResult.requestedUserType) {
-          setErrors({ 
-            submit: `Account exists as ${authResult.existingUserType}. Please sign in as ${authResult.existingUserType} instead.` 
+          setErrors({
+            submit: `Account exists as ${authResult.existingUserType}. Please sign in as ${authResult.existingUserType} instead.`,
           });
         } else {
           setErrors({ submit: authResult.error || "Google sign-up failed" });
         }
       }
     } catch (error) {
-      console.error('Google sign-up error:', error);
-      if (error.code === 'auth/popup-closed-by-user') {
-        setErrors({ submit: 'Sign-up cancelled' });
-      } else if (error.code === 'auth/popup-blocked') {
-        setErrors({ submit: 'Popup blocked. Please allow popups for this site.' });
+      console.error("Google sign-up error:", error);
+      if (error.code === "auth/popup-closed-by-user") {
+        setErrors({ submit: "Sign-up cancelled" });
+      } else if (error.code === "auth/popup-blocked") {
+        setErrors({ submit: "Popup blocked. Please allow popups for this site." });
       } else {
-        setErrors({ submit: error.message || 'Google sign-up failed' });
+        setErrors({ submit: error.message || "Google sign-up failed" });
       }
     } finally {
       setIsGoogleLoading(false);
     }
   };
 
+  const handleAppleSignUp = async () => {
+    try {
+      const result = await signInWithPopup(auth, appleProvider);
+      const user = result.user;
+      console.log("User Info:", user);
+    } catch (error) {
+      console.error("Error during Apple sign-in:", error);
+    }
+  };
+
+  
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -363,23 +376,21 @@ export default function SignUpUserPage() {
                 </div>
               </div>
 
-              {/* Google Sign Up */}
-              <motion.button
-                type="button"
-                onClick={handleGoogleSignUp}
-                disabled={isLoading || isGoogleLoading}
-                whileHover={{ scale: isGoogleLoading ? 1 : 1.02 }}
-                whileTap={{ scale: isGoogleLoading ? 1 : 0.98 }}
-                className="w-full border-2 border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 text-gray-700 py-4 rounded-2xl font-medium text-lg transition-all duration-300 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isGoogleLoading ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <span>Signing up...</span>
-                  </div>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+              {/* Google & Apple Sign Up */}
+              <div className="flex space-x-4 w-full justify-center items-center">
+                {/* Google Button */}
+                <motion.button
+                  type="button"
+                  onClick={handleGoogleSignUp}
+                  disabled={isLoading || isGoogleLoading}
+                  whileHover={{ scale: isGoogleLoading ? 1 : 1.1 }}
+                  whileTap={{ scale: isGoogleLoading ? 1 : 0.95 }}
+                  className="p-4 bg-white border-2 border-gray-200 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                >
+                  {isGoogleLoading ? (
+                    <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-10 h-10" viewBox="0 0 24 24">
                       <path
                         fill="#4285F4"
                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -397,10 +408,27 @@ export default function SignUpUserPage() {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                       />
                     </svg>
-                    <span>Sign up with Google</span>
-                  </>
-                )}
-              </motion.button>
+                  )}
+                </motion.button>
+
+                <div className="w-0.5 h-10 rounded-2xl bg-black/40" />
+
+                {/* Apple Button */}
+                <motion.button
+                  type="button"
+                  onClick={handleAppleSignUp}
+                  disabled={isLoading || isAppleLoading}
+                  whileHover={{ scale: isAppleLoading ? 1 : 1.1 }}
+                  whileTap={{ scale: isAppleLoading ? 1 : 0.95 }}
+                  className="p-4 bg-black rounded-full flex items-center justify-center shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                >
+                  {isAppleLoading ? (
+                    <div className="w-10 h-10 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <FaApple className="h-10 w-10 text-white" />
+                  )}
+                </motion.button>
+              </div>
 
               {/* Already have account */}
               <motion.div variants={itemVariants} className="text-center mt-8">
