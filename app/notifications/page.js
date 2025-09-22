@@ -27,7 +27,7 @@ import { formatTimeAgo } from "@/lib/utils";
 const NotificationsPage = () => {
   const { user } = useAuthStore();
   const router = useRouter();
-  
+
   const [notifications, setNotifications] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
@@ -37,45 +37,43 @@ const NotificationsPage = () => {
   const [actionLoading, setActionLoading] = useState(new Set());
 
   // Load notifications
-  const loadNotifications = useCallback(async (loadMore = false) => {
-    if (!user?.id) return;
+  const loadNotifications = useCallback(
+    async (loadMore = false) => {
+      if (!user?.id) return;
 
-    try {
-      if (loadMore) {
-        setIsLoadingMore(true);
-      } else {
-        setIsLoading(true);
+      try {
+        if (loadMore) {
+          setIsLoadingMore(true);
+        } else {
+          setIsLoading(true);
+        }
+
+        const result = await getUserNotifications(user.id, 20, loadMore ? lastNotificationId : null);
+
+        if (result.error) {
+          setError(result.error);
+          return;
+        }
+
+        if (loadMore) {
+          setNotifications((prev) => [...prev, ...result.notifications]);
+        } else {
+          setNotifications(result.notifications);
+        }
+
+        setHasMore(result.hasMore);
+        setLastNotificationId(result.lastNotificationId);
+        setError("");
+      } catch (err) {
+        console.error("Error loading notifications:", err);
+        setError("Failed to load notifications");
+      } finally {
+        setIsLoading(false);
+        setIsLoadingMore(false);
       }
-
-      const result = await getUserNotifications(
-        user.id,
-        20,
-        loadMore ? lastNotificationId : null
-      );
-
-      if (result.error) {
-        setError(result.error);
-        return;
-      }
-
-      if (loadMore) {
-        setNotifications(prev => [...prev, ...result.notifications]);
-      } else {
-        setNotifications(result.notifications);
-      }
-
-      setHasMore(result.hasMore);
-      setLastNotificationId(result.lastNotificationId);
-      setError("");
-
-    } catch (err) {
-      console.error("Error loading notifications:", err);
-      setError("Failed to load notifications");
-    } finally {
-      setIsLoading(false);
-      setIsLoadingMore(false);
-    }
-  }, [user?.id, lastNotificationId]);
+    },
+    [user?.id, lastNotificationId]
+  );
 
   // Initial load
   useEffect(() => {
@@ -86,13 +84,26 @@ const NotificationsPage = () => {
   const getNotificationIcon = (type) => {
     switch (type) {
       case "comment":
-        return <MessageCircle className="w-5 h-5 text-blue-500" />;
+        return <MessageCircle className="w-3 h-3 text-blue-500" />;
       case "like":
-        return <Heart className="w-5 h-5 text-red-500" />;
+        return <Heart className="w-3 h-3 text-red-500" />;
       case "follow":
-        return <UserPlus className="w-5 h-5 text-green-500" />;
+        return <UserPlus className="w-3 h-3 text-green-500" />;
       default:
-        return <Bell className="w-5 h-5 text-gray-500" />;
+        return <Bell className="w-3 h-3 text-gray-500" />;
+    }
+  };
+
+  const handleUserNavigate = (e, clickedUser) => {
+    e.stopPropagation();
+    if (!clickedUser) return;
+
+    const isOwnProfile = user?.id === clickedUser;
+
+    if (isOwnProfile) {
+      router.push("/my-posts");
+    } else {
+      router.push(`/user/user?query=${clickedUser}`);
     }
   };
 
@@ -100,20 +111,16 @@ const NotificationsPage = () => {
   const handleNotificationClick = async (notification) => {
     // Mark as read if not already
     if (!notification.isRead) {
-      setActionLoading(prev => new Set([...prev, notification.id]));
+      setActionLoading((prev) => new Set([...prev, notification.id]));
       await markNotificationAsRead(notification.id);
-      setActionLoading(prev => {
+      setActionLoading((prev) => {
         const newSet = new Set(prev);
         newSet.delete(notification.id);
         return newSet;
       });
 
       // Update local state
-      setNotifications(prev =>
-        prev.map(n =>
-          n.id === notification.id ? { ...n, isRead: true } : n
-        )
-      );
+      setNotifications((prev) => prev.map((n) => (n.id === notification.id ? { ...n, isRead: true } : n)));
     }
 
     // Navigate to post
@@ -125,21 +132,17 @@ const NotificationsPage = () => {
   // Mark single notification as read
   const handleMarkAsRead = async (notificationId, e) => {
     e.stopPropagation();
-    setActionLoading(prev => new Set([...prev, notificationId]));
-    
+    setActionLoading((prev) => new Set([...prev, notificationId]));
+
     try {
       const result = await markNotificationAsRead(notificationId);
       if (result.success) {
-        setNotifications(prev =>
-          prev.map(n =>
-            n.id === notificationId ? { ...n, isRead: true } : n
-          )
-        );
+        setNotifications((prev) => prev.map((n) => (n.id === notificationId ? { ...n, isRead: true } : n)));
       }
     } catch (err) {
       console.error("Error marking notification as read:", err);
     } finally {
-      setActionLoading(prev => {
+      setActionLoading((prev) => {
         const newSet = new Set(prev);
         newSet.delete(notificationId);
         return newSet;
@@ -150,20 +153,18 @@ const NotificationsPage = () => {
   // Mark all as read
   const handleMarkAllAsRead = async () => {
     if (!user?.id) return;
-    
-    setActionLoading(prev => new Set([...prev, "mark-all"]));
-    
+
+    setActionLoading((prev) => new Set([...prev, "mark-all"]));
+
     try {
       const result = await markAllNotificationsAsRead(user.id);
       if (result.success) {
-        setNotifications(prev =>
-          prev.map(n => ({ ...n, isRead: true }))
-        );
+        setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
       }
     } catch (err) {
       console.error("Error marking all as read:", err);
     } finally {
-      setActionLoading(prev => {
+      setActionLoading((prev) => {
         const newSet = new Set(prev);
         newSet.delete("mark-all");
         return newSet;
@@ -174,17 +175,17 @@ const NotificationsPage = () => {
   // Delete notification
   const handleDeleteNotification = async (notificationId, e) => {
     e.stopPropagation();
-    setActionLoading(prev => new Set([...prev, notificationId]));
-    
+    setActionLoading((prev) => new Set([...prev, notificationId]));
+
     try {
       const result = await deleteNotification(notificationId);
       if (result.success) {
-        setNotifications(prev => prev.filter(n => n.id !== notificationId));
+        setNotifications((prev) => prev.filter((n) => n.id !== notificationId));
       }
     } catch (err) {
       console.error("Error deleting notification:", err);
     } finally {
-      setActionLoading(prev => {
+      setActionLoading((prev) => {
         const newSet = new Set(prev);
         newSet.delete(notificationId);
         return newSet;
@@ -193,12 +194,33 @@ const NotificationsPage = () => {
   };
 
   // Get unread count
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 p-4">
-        <div className="max-w-2xl mx-auto">
+      <div className="min-h-screen bg-gray-50">
+        <div className="bg-white border-b border-gray-200 sticky top-0 z-10">
+          <div className="max-w-2xl mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <Bell className="w-6 h-6 text-primary" />
+                <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <button className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-colors">
+                  <RefreshCw className={`w-5 h-5`} />
+                </button>
+
+                <button className="flex items-center space-x-1 px-3 py-2 text-sm text-primary hover:bg-primary/10 rounded-lg transition-colors disabled:opacity-50">
+                  <CheckCheck className="w-4 h-4" />
+                  <span>Mark all read</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-2xl mx-auto mt-4">
           <div className="bg-white rounded-lg shadow-sm p-6">
             <div className="animate-pulse space-y-4">
               <div className="h-8 bg-gray-200 rounded w-1/3"></div>
@@ -228,12 +250,10 @@ const NotificationsPage = () => {
               <Bell className="w-6 h-6 text-primary" />
               <h1 className="text-2xl font-bold text-gray-900">Notifications</h1>
               {unreadCount > 0 && (
-                <span className="bg-primary text-white text-xs px-2 py-1 rounded-full">
-                  {unreadCount}
-                </span>
+                <span className="bg-primary text-white text-xs px-2 py-1 rounded-full">{unreadCount}</span>
               )}
             </div>
-            
+
             <div className="flex items-center space-x-2">
               <button
                 onClick={() => loadNotifications(false)}
@@ -242,7 +262,7 @@ const NotificationsPage = () => {
               >
                 <RefreshCw className={`w-5 h-5 ${isLoading ? "animate-spin" : ""}`} />
               </button>
-              
+
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllAsRead}
@@ -287,13 +307,53 @@ const NotificationsPage = () => {
                 } ${index !== notifications.length - 1 ? "border-b border-gray-100" : ""}`}
               >
                 {/* Unread indicator */}
-                {!notification.isRead && (
-                  <div className="absolute left-2 top-6 w-2 h-2 bg-primary rounded-full"></div>
-                )}
+                {!notification.isRead && <div className="absolute left-2 top-6 w-2 h-2 bg-primary rounded-full"></div>}
 
                 {/* Icon */}
-                <div className="flex-shrink-0 ml-4">
-                  <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center">
+                <div className="flex-shrink-0 ml-4 relative">
+                  {/* Avatar */}
+                  <div
+                    onClick={(e) => handleUserNavigate(e, notification.senderId)}
+                    className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center overflow-hidden"
+                  >
+                    {notification?.profileImage ? (
+                      <img
+                        src={encodeURI(notification.profileImage)} // handles spaces/special chars
+                        alt={notification?.senderName || "user"}
+                        className="w-12 h-12 rounded-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.style.display = "none";
+                          e.currentTarget.insertAdjacentHTML(
+                            "afterend",
+                            `<span class="text-gray-700 font-semibold text-lg">
+              ${
+                notification?.senderName
+                  ? notification.senderName
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")
+                      .toUpperCase()
+                  : "U"
+              }
+            </span>`
+                          );
+                        }}
+                      />
+                    ) : (
+                      <span className="text-gray-700 font-semibold text-lg">
+                        {notification?.senderName
+                          ? notification.senderName
+                              .split(" ")
+                              .map((n) => n[0])
+                              .join("")
+                              .toUpperCase()
+                          : "U"}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Notification type icon bubble */}
+                  <div className="absolute -bottom-1 -right-2 w-6 h-6 rounded-full flex items-center justify-center shadow bg-white">
                     {getNotificationIcon(notification.type)}
                   </div>
                 </div>
@@ -302,21 +362,19 @@ const NotificationsPage = () => {
                 <div className="flex-1 ml-4 min-w-0">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
-                      <p className={`text-sm ${!notification.isRead ? "font-semibold text-gray-900" : "text-gray-700"}`}>
+                      <p
+                        className={`text-sm ${!notification.isRead ? "font-semibold text-gray-900" : "text-gray-700"}`}
+                      >
                         {notification.message}
                       </p>
-                      
+
                       {notification.postTitle && (
-                        <p className="text-xs text-gray-500 mt-1 truncate">
-                          on &quot;{notification.postTitle}&quot;
-                        </p>
+                        <p className="text-xs text-gray-500 mt-1 truncate">on &quot;{notification.postTitle}&quot;</p>
                       )}
-                      
+
                       <div className="flex items-center space-x-2 mt-2">
                         <Clock className="w-3 h-3 text-gray-400" />
-                        <span className="text-xs text-gray-500">
-                          {formatTimeAgo(notification.createdAt)}
-                        </span>
+                        <span className="text-xs text-gray-500">{formatTimeAgo(notification.createdAt)}</span>
                       </div>
                     </div>
 
@@ -336,7 +394,7 @@ const NotificationsPage = () => {
                           )}
                         </button>
                       )}
-                      
+
                       <button
                         onClick={(e) => handleDeleteNotification(notification.id, e)}
                         disabled={actionLoading.has(notification.id)}
@@ -349,7 +407,7 @@ const NotificationsPage = () => {
                           <Trash2 className="w-4 h-4" />
                         )}
                       </button>
-                      
+
                       <ChevronRight className="w-4 h-4 text-gray-300" />
                     </div>
                   </div>

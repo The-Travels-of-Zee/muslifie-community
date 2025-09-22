@@ -7,9 +7,10 @@ import { z } from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuthStore } from "@/stores/useAuthStore";
-import { signInWithEmail, signInWithGoogle } from "@/lib/actions/authActions";
+import { signInWithApple, signInWithEmail, signInWithGoogle } from "@/lib/actions/authActions";
 import { signInWithPopup } from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase/config";
+import { appleProvider, auth, googleProvider } from "@/lib/firebase/config";
+import { FaApple } from "react-icons/fa";
 
 // Zod validation schema
 const logInSchema = z.object({
@@ -30,6 +31,7 @@ export default function LogInPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isAppleLoading, setIsAppleLoading] = useState(false);
 
   const handleInputChange = (field, value) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -84,7 +86,7 @@ export default function LogInPage() {
     }
   };
 
-  // Updated Google Sign In function
+  // Google Sign In function
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     setErrors({});
@@ -127,6 +129,67 @@ export default function LogInPage() {
       }
     } finally {
       setIsGoogleLoading(false);
+    }
+  };
+
+  // Apple Signin Function
+  const handleAppleSignIn = async () => {
+    setIsAppleLoading(true);
+    setErrors({});
+
+    try {
+      // Firebase Apple sign-in
+      const result = await signInWithPopup(auth, appleProvider);
+      const user = result.user;
+
+      // Get ID token
+      const idToken = await user.getIdToken();
+
+      // Call your server action with traveler as default userType for web
+      const authResult = await signInWithApple(
+        idToken,
+        "traveler",
+        user?.email,
+        user?.displayName || user?.providerData?.[0]?.displayName
+      );
+
+      if (authResult.success) {
+        if (authResult.user) {
+          setUser(authResult.user);
+          await checkAuthStatus();
+          
+          router.push("/");
+        }
+      } else {
+        // Handle different error types
+        if (authResult.existingUserType && authResult.requestedUserType) {
+          setErrors({
+            submit: `Account exists as ${authResult.existingUserType}. Please sign in as ${authResult.existingUserType} instead.`,
+          });
+        } else {
+          setErrors({ submit: authResult.error || "Apple sign-in failed" });
+        }
+      }
+    } catch (error) {
+      console.error("Apple sign-in error:", error);
+
+      let errorMessage = "Apple sign-in failed";
+
+      if (error.code === "auth/popup-closed-by-user") {
+        errorMessage = "Sign-in cancelled";
+      } else if (error.code === "auth/popup-blocked") {
+        errorMessage = "Popup blocked. Please allow popups for this site.";
+      } else if (error.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your connection.";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many attempts. Please try again later.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setErrors({ submit: errorMessage });
+    } finally {
+      setIsAppleLoading(false);
     }
   };
 
@@ -419,23 +482,21 @@ export default function LogInPage() {
                 </div>
               </div>
 
-              {/* Google Sign In */}
-              <motion.button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={isLoading || isGoogleLoading}
-                whileHover={{ scale: isGoogleLoading ? 1 : 1.02 }}
-                whileTap={{ scale: isGoogleLoading ? 1 : 0.98 }}
-                className="w-full border-2 border-gray-200 hover:border-gray-300 bg-white hover:bg-gray-50 text-gray-700 py-4 rounded-2xl font-medium text-lg transition-all duration-300 flex items-center justify-center space-x-3 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isGoogleLoading ? (
-                  <div className="flex items-center justify-center space-x-2">
-                    <div className="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                    <span className="font-notosans-light">Signing in...</span>
-                  </div>
-                ) : (
-                  <>
-                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+              {/* Google & Apple Sign In */}
+              <div className="flex space-x-4 w-full justify-center items-center">
+                {/* Google Button */}
+                <motion.button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={isLoading || isGoogleLoading}
+                  whileHover={{ scale: isGoogleLoading ? 1 : 1.1 }}
+                  whileTap={{ scale: isGoogleLoading ? 1 : 0.95 }}
+                  className="p-4 bg-white border-2 border-gray-200 rounded-full flex items-center justify-center shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                >
+                  {isGoogleLoading ? (
+                    <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-10 h-10" viewBox="0 0 24 24">
                       <path
                         fill="#4285F4"
                         d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -453,10 +514,27 @@ export default function LogInPage() {
                         d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                       />
                     </svg>
-                    <span className="font-notosans-light">Sign in with Google</span>
-                  </>
-                )}
-              </motion.button>
+                  )}
+                </motion.button>
+
+                <div className="w-0.5 h-10 rounded-2xl bg-black/40" />
+
+                {/* Apple Button */}
+                <motion.button
+                  type="button"
+                  onClick={handleAppleSignIn}
+                  disabled={isLoading || isAppleLoading}
+                  whileHover={{ scale: isAppleLoading ? 1 : 1.1 }}
+                  whileTap={{ scale: isAppleLoading ? 1 : 0.95 }}
+                  className="p-4 bg-black rounded-full flex items-center justify-center shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300"
+                >
+                  {isAppleLoading ? (
+                    <div className="w-10 h-10 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <FaApple className="h-10 w-10 text-white" />
+                  )}
+                </motion.button>
+              </div>
 
               {/* Sign Up Link */}
               <motion.div variants={itemVariants} className="text-center mt-8">

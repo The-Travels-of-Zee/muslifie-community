@@ -13,9 +13,10 @@ import {
 } from "@/lib/actions/commentActions";
 import { User, Reply, Send, MoreHorizontal, Edit3, Trash2 } from "lucide-react";
 import { useAuthStore } from "@/stores/useAuthStore";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
+  const router = useRouter();
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [newComment, setNewComment] = useState("");
@@ -32,7 +33,6 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
 
   const { user } = useAuthStore();
   // console.log(user);
-
   const menuRefs = useRef({});
 
   useEffect(() => {
@@ -57,6 +57,19 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const handleUserNavigate = (e, clickedUser) => {
+    e.stopPropagation();
+    if (!clickedUser?.id) return;
+
+    const isOwnProfile = user?.id === clickedUser.id;
+
+    if (isOwnProfile) {
+      router.push("/my-posts");
+    } else {
+      router.push(`/user/user?query=${clickedUser.id}`);
+    }
+  };
 
   const loadComments = async () => {
     setLoading(true);
@@ -95,6 +108,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
         const result = await addComment(post.id, {
           content: newComment.trim(),
           userId: user.id,
+          profileImage: user.profileImage,
         });
 
         if (result.success) {
@@ -209,6 +223,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
         const result = await addReply(post.id, commentId, {
           content: replyContent.trim(),
           userId: user.id,
+          profileImage: user.profileImage,
         });
 
         if (result.success) {
@@ -394,7 +409,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                 {/* Comment Header */}
                 <div className="flex items-start justify-between">
                   <div className="flex items-center space-x-3">
-                    <Link href={`/user/user?query=${comment.user?.id}`}>
+                    <div onClick={(e) => handleUserNavigate(e, comment.user)} className="cursor-pointer">
                       <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center overflow-hidden">
                         {comment.user?.profileImage ? (
                           <img
@@ -431,14 +446,14 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                           </span>
                         )}
                       </div>
-                    </Link>
+                    </div>
                     <div>
                       <div className="flex flex-wrap items-center gap-2">
-                        <Link href={`/user/user?query=${comment.user?.id}`}>
+                        <div onClick={(e) => handleUserNavigate(e, comment.user)} className="cursor-pointer">
                           <span className="font-semibold text-gray-900 text-sm sm:text-base">
                             {comment.user?.fullName || "Anonymous"}
                           </span>
-                        </Link>
+                        </div>
                         <span className="text-xs text-gray-500">{formatTimeAgo(comment.createdAt)}</span>
                         {comment.isEdited && <span className="text-xs text-gray-400">(edited)</span>}
                       </div>
@@ -585,7 +600,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                     {expandedReplies[comment.id].map((reply) => (
                       <div key={reply.id} className="flex justify-between items-start bg-gray-50 rounded-lg p-3">
                         <div className="flex space-x-3 flex-1">
-                          <Link href={`/user/user?query=${reply.user?.id}`}>
+                          <div onClick={(e) => handleUserNavigate(e, reply.user)} className="cursor-pointer">
                             <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center overflow-hidden">
                               {reply.user?.profileImage ? (
                                 <img
@@ -622,14 +637,14 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
                                 </span>
                               )}
                             </div>
-                          </Link>
+                          </div>
                           <div className="flex-1">
                             <div className="flex flex-wrap items-center gap-2 mb-1">
-                              <Link href={`/user/user?query=${reply.user?.id}`}>
+                              <div onClick={(e) => handleUserNavigate(e, reply.user)} className="cursor-pointer">
                                 <span className="font-medium text-gray-900 text-sm">
                                   {reply.user?.fullName || "Anonymous"}
                                 </span>
-                              </Link>
+                              </div>
                               <span className="text-xs text-gray-500">{formatTimeAgo(reply.createdAt)}</span>
                               {reply.isEdited && <span className="text-xs text-gray-400">(edited)</span>}
                             </div>
@@ -680,7 +695,7 @@ const Comments = ({ post, formatTimeAgo, onCommentsUpdate }) => {
 
         {/* Delete Confirmation Modal */}
         {showDeleteModal && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
+          <div className="fixed inset-0 flex items-center justify-center bg-black/50 bg-opacity-40 z-50">
             <div className="bg-white rounded-lg p-6 w-80">
               <h3 className="text-lg font-semibold text-gray-800 mb-4">Confirm Delete</h3>
               <p className="text-gray-600 mb-6">Are you sure you want to delete this {showDeleteModal.type}?</p>

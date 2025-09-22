@@ -15,7 +15,7 @@ const otpSchema = z.object({
 
 export default function OtpConfirmPage() {
   const router = useRouter();
-  const { setUser, checkAuthStatus } = useAuthStore();
+  const { setUser } = useAuthStore();
   const [formData, setFormData] = useState({ otp: "" });
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
