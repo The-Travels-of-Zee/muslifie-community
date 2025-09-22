@@ -158,14 +158,7 @@ export default function LogInPage() {
           setUser(authResult.user);
           await checkAuthStatus();
 
-          // Navigate based on user requirements
-          if (authResult.requiresProfileCompletion) {
-            router.push("/onboarding/profile-completion");
-          } else if (authResult.isNewUser) {
-            router.push("/onboarding/welcome");
-          } else {
-            router.push("/dashboard");
-          }
+          router.push("/");
         }
       } else {
         // Handle different error types
