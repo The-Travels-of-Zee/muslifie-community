@@ -6,7 +6,7 @@ import { User, Mail, Lock, Eye, EyeOff, ArrowLeft } from "lucide-react";
 import { z } from "zod";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { signUpUserWithEmail, signInWithGoogle } from "@/lib/actions/authActions";
+import { signUpUserWithEmail, signInWithGoogle, signInWithApple } from "@/lib/actions/authActions";
 import { useAuthStore } from "@/stores/useAuthStore";
 import { signInWithPopup } from "firebase/auth";
 import { auth, googleProvider, appleProvider } from "@/lib/firebase/config";
@@ -131,17 +131,74 @@ export default function SignUpUserPage() {
     }
   };
 
+  // handleAppleSignUp function
   const handleAppleSignUp = async () => {
+    setIsAppleLoading(true);
+    setErrors({});
+
     try {
+      // Firebase Apple sign-in
       const result = await signInWithPopup(auth, appleProvider);
       const user = result.user;
-      console.log("User Info:", user);
+
+      // Get ID token
+      const idToken = await user.getIdToken();
+
+      // Call your server action with traveler as default userType for web
+      const authResult = await signInWithApple(
+        idToken,
+        "traveler",
+        user?.email,
+        user?.displayName || user?.providerData?.[0]?.displayName
+      );
+
+      if (authResult.success) {
+        if (authResult.user) {
+          setUser(authResult.user);
+          await checkAuthStatus();
+
+          // Navigate based on user requirements
+          if (authResult.requiresProfileCompletion) {
+            router.push("/onboarding/profile-completion");
+          } else if (authResult.isNewUser) {
+            router.push("/onboarding/welcome");
+          } else {
+            router.push("/dashboard");
+          }
+        }
+      } else {
+        // Handle different error types
+        if (authResult.existingUserType && authResult.requestedUserType) {
+          setErrors({
+            submit: `Account exists as ${authResult.existingUserType}. Please sign in as ${authResult.existingUserType} instead.`,
+          });
+        } else {
+          setErrors({ submit: authResult.error || "Apple sign-in failed" });
+        }
+      }
     } catch (error) {
-      console.error("Error during Apple sign-in:", error);
+      console.error("Apple sign-in error:", error);
+
+      let errorMessage = "Apple sign-in failed";
+
+      if (error.code === "auth/popup-closed-by-user") {
+        errorMessage = "Sign-in cancelled";
+      } else if (error.code === "auth/popup-blocked") {
+        errorMessage = "Popup blocked. Please allow popups for this site.";
+      } else if (error.code === "auth/network-request-failed") {
+        errorMessage = "Network error. Please check your connection.";
+      } else if (error.code === "auth/too-many-requests") {
+        errorMessage = "Too many attempts. Please try again later.";
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+
+      setErrors({ submit: errorMessage });
+    } finally {
+      setIsAppleLoading(false);
     }
   };
 
-  
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
